@@ -5,6 +5,14 @@ from engine import EngineExecutor
 from state_functions import StateFunctions  # Import the actual StateFunctions
 from unittest.mock import AsyncMock
 
+# IMPORTANT: To run these tests, do NOT use `python test_engine.py` directly.
+# Instead, run the `run_tests.sh` script:
+#
+# 1. Make sure `run_tests.sh` is executable: `chmod +x run_tests.sh`
+# 2. Run the script: `./run_tests.sh`
+#
+# This will install pytest and run the tests correctly using the pytest framework.
+
 @pytest.mark.asyncio
 async def test_engine_executor_initialization():
     # Create a simple mock graph
