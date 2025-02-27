@@ -110,7 +110,7 @@ async def test_engine_executor_render_graph(tmp_path):
     nodes = ['__start__', 'state1', '__end__']
     edges = [('__start__', 'state1'), ('state1', '__end__')]
     state_functions = StateFunctions()  # Dummy state functions
-    engine = WFEngine.from_nodes_and_edges(nodes, edges, state_functions)  # Changed class name
+    engine = WFEngine.from_nodes_and_edges(nodes, edges, state_functions)
 
     # Render the graph to a temporary file
     output_file = tmp_path / "test_graph.png"
@@ -136,14 +136,14 @@ async def test_engine_override_state():
         {'src': '__start__', 'dst': 'state1', 'label': 'to_state1'},
         {'src': 'state1', 'dst': '__end__', 'label': 'to_end'},
     ]
-    state_functions = StateFunctions()  # Use the real StateFunctions
+    state_functions = StateFunctions()
     engine = WFEngine.from_nodes_and_edges(nodes, edges, state_functions)
 
     # Set a flag in the context to trigger the override in _run_state
     engine.context["override_state_from_state1"] = True
 
     # Mock _request_input for the override_state case
-    engine._request_input = AsyncMock(return_value="override_state_target")
+    engine._request_input = AsyncMock(return_value="override_state_target") #  the mock is not needed
 
     await engine.run()
     assert engine.current_state == "override_state_target"

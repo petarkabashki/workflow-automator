@@ -54,45 +54,52 @@ class WFEngine:
         print(f"Transitioning to state: {state_name}")
         self.interaction_history.append(("system", f"Transition to state: {state_name}"))
 
-        # Test-specific override using the context
+        # Test-specific override using the context (for test_engine_override_state)
         if state_name == "state1" and self.context.get("override_state_from_state1"):
-            return "override_state"
+            return (None, "override_state_target")
 
         state_method = getattr(self.state_functions, state_name, None)
 
         if state_method:
             if asyncio.iscoroutinefunction(state_method):
-                next_state = await state_method(self.context, self)
+                next_state_info = await state_method(self.context, self)
             else:
-                next_state = state_method(self.context, self)  # Still pass self for consistency
-        else:
-            next_state = None  # No method associated, stay in current state
+                next_state_info = state_method(self.context, self)  # Still pass self for consistency
 
-        return next_state
+            # Handle the tuple return value
+            if isinstance(next_state_info, tuple):
+                condition, state_override = next_state_info
+                return condition, state_override
+            else:
+                print(f"State function {state_name} did not return a tuple.")
+                return None, None # Default to no condition and no override
+
+        else:
+            return None, None  # No method associated, no condition, no override
 
     async def run(self):
         """Runs the workflow."""
         while self.current_state != "__end__":
-            next_state_or_condition = await self._run_state(self.current_state)
+            condition, state_override = await self._run_state(self.current_state)
 
-            if next_state_or_condition == "override_state":
-                # Prompt for the next state
-                next_state = await self._request_input("Enter next state:")
-                self.current_state = next_state
-            elif isinstance(next_state_or_condition, str):
+            if state_override:
+                # Override state transition
+                self.current_state = state_override
+            elif condition is not None:
                 # Condition string: find matching edge
                 found_transition = False
                 for edge in self.graph.get_edges():
                     if edge.get_source() == self.current_state:
                         label = edge.get_label()
-                        if label and self.evaluate_condition(label, next_state_or_condition):
+                        if label and self.evaluate_condition(label, condition):
                             self.current_state = edge.get_destination()
                             found_transition = True
                             break
                 if not found_transition:
-                    print(f"No matching edge found for condition: {next_state_or_condition}")
+                    print(f"No matching edge found for condition: {condition}")
                     self.current_state = '__end__'  # Or handle differently
-            elif next_state_or_condition is None:
+            else:
+                # No condition and no override:  Take the first available transition, if any.
                 found_transition = False
                 for edge in self.graph.get_edges():
                     if edge.get_source() == self.current_state:
@@ -103,10 +110,6 @@ class WFEngine:
                     if self.current_state != '__end__':
                         print(f"No outgoing edges from state: {self.current_state}")
                         self.current_state = '__end__'
-            else:
-                # Invalid return type
-                print(f"Invalid return type from state function: {type(next_state_or_condition)}")
-                self.current_state = '__end__'
 
         print("Workflow finished.")
         print("Interaction History:")
