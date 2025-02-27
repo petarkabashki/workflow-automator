@@ -108,3 +108,7 @@ class EngineExecutor:
         for edge in edges:
             graph.add_edge(pydot.Edge(edge[0], edge[1]))
         return EngineExecutor(graph, state_functions)
+
+    def render_graph(self, filename="workflow", format="png"):
+        """Renders the graph to a file."""
+        self.graph.write(f"{filename}.{format}", format=format)
