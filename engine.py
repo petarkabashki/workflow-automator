@@ -15,6 +15,7 @@ class WFEngine:
         self.current_state = "__start__"
         self.interaction_history = []
         self.lock = asyncio.Lock()  # Asynchronous lock
+        print(f"WFEngine initialized. Initial state: {self.current_state}") # DEBUG
 
     async def send_input(self, input_data):
         """
@@ -92,6 +93,9 @@ class WFEngine:
                 # Override state transition
                 print(f"run: Overriding to state: {state_override}") # DEBUG
                 self.current_state = state_override
+                print(f"run: Current state after override: {self.current_state}") # DEBUG
+                break  # Exit the loop immediately after override
+
             elif condition is not None:
                 # Condition string: find matching edge
                 found_transition = False
@@ -117,6 +121,7 @@ class WFEngine:
                     if self.current_state != '__end__':
                         print(f"No outgoing edges from state: {self.current_state}")
                         self.current_state = '__end__'
+            print(f"run: End of loop iteration. Current state: {self.current_state}") # DEBUG
 
         print("Workflow finished.")
         print("Interaction History:")
