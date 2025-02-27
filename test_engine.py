@@ -15,14 +15,14 @@ if __name__ == "__main__":
 
 import pytest
 import asyncio
-import networkx as nx  # Import NetworkX
+import pydot  # Import pydot
 from engine import EngineExecutor
 from state_functions import StateFunctions
 from unittest.mock import AsyncMock
 
 @pytest.mark.asyncio
 async def test_engine_executor_initialization():
-    # Create a simple NetworkX graph using from_nodes_and_edges
+    # Create a simple pydot graph using from_nodes_and_edges
     nodes = ['__start__', 'request_input', '__end__']
     edges = [('__start__', 'request_input'), ('request_input', '__end__')]
     state_functions = StateFunctions()
@@ -31,7 +31,7 @@ async def test_engine_executor_initialization():
 
 @pytest.mark.asyncio
 async def test_engine_executor_run():
-    # Create a simple NetworkX graph using from_nodes_and_edges
+    # Create a simple pydot graph using from_nodes_and_edges
     nodes = ['__start__', 'request_input', 'extract_data', 'check_all_data_collected',
              'ask_confirmation', 'process_data', '__end__']
     edges = [('__start__', 'request_input'), ('request_input', 'extract_data'),

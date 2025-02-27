@@ -1,6 +1,5 @@
 import asyncio
-import networkx as nx
-import pydot  # Import pydot
+import pydot
 from io import StringIO
 
 class EngineExecutor:
@@ -9,7 +8,7 @@ class EngineExecutor:
     and interaction history.
     """
 
-    def __init__(self, graph: nx.DiGraph, state_functions):
+    def __init__(self, graph, state_functions):
         self.graph = graph
         self.state_functions = state_functions
         self.context = {}  # Shared memory for state functions
@@ -76,11 +75,11 @@ class EngineExecutor:
                 # Method override
                 self.current_state = next_state
             else:
-                # NetworkX-specific edge traversal
+                # pydot-specific edge traversal
                 found_transition = False
-                for u, v in self.graph.edges():  # Iterate through edges
-                    if u == self.current_state:
-                        self.current_state = v
+                for edge in self.graph.get_edges():
+                    if edge.get_source() == self.current_state:
+                        self.current_state = edge.get_destination()
                         found_transition = True
                         break
 
@@ -97,22 +96,15 @@ class EngineExecutor:
     @staticmethod
     def from_dot_string(dot_string, state_functions):
         """Creates an EngineExecutor from a DOT string."""
-        # Use pydot to parse the DOT string
         (graph,) = pydot.graph_from_dot_data(dot_string)
-
-        # Convert to a NetworkX DiGraph
-        nx_graph = nx.DiGraph()
-        for node in graph.get_nodes():
-            nx_graph.add_node(node.get_name())
-        for edge in graph.get_edges():
-            nx_graph.add_edge(edge.get_source(), edge.get_destination())
-
-        return EngineExecutor(nx_graph, state_functions)
+        return EngineExecutor(graph, state_functions)
 
     @staticmethod
     def from_nodes_and_edges(nodes, edges, state_functions):
         """Creates an EngineExecutor from lists of nodes and edges."""
-        graph = nx.DiGraph()
-        graph.add_nodes_from(nodes)
-        graph.add_edges_from(edges)
+        graph = pydot.Dot(graph_type='digraph')
+        for node in nodes:
+            graph.add_node(pydot.Node(node))
+        for edge in edges:
+            graph.add_edge(pydot.Edge(edge[0], edge[1]))
         return EngineExecutor(graph, state_functions)
