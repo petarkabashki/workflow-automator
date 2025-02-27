@@ -69,53 +69,51 @@ class WFEngine:
     async def run(self):
         """Runs the workflow."""
         while self.current_state != "__end__":
-            next_state = await self._run_state(self.current_state)
+            next_state_or_condition = await self._run_state(self.current_state)
 
-            if next_state:
-                # Method override
+            if next_state_or_condition == "override_state":
+                # Prompt for the next state
+                next_state = await self._request_input("Enter next state:")
                 self.current_state = next_state
-            else:
-                # pydot-specific edge traversal with label checking
+            elif isinstance(next_state_or_condition, str):
+                # Condition string: find matching edge
                 found_transition = False
                 for edge in self.graph.get_edges():
                     if edge.get_source() == self.current_state:
-                        label = edge.get_label()  # Get the edge label
-                        if label:
-                            # VERY SIMPLE condition evaluation (replace with your logic)
-                            if self.evaluate_condition(label):
-                                self.current_state = edge.get_destination()
-                                found_transition = True
-                                break
-                        else:
-                            # Transition if there is no label
+                        label = edge.get_label()
+                        if label and self.evaluate_condition(label, next_state_or_condition):
                             self.current_state = edge.get_destination()
                             found_transition = True
                             break
-
+                if not found_transition:
+                    print(f"No matching edge found for condition: {next_state_or_condition}")
+                    self.current_state = '__end__'  # Or handle differently
+            elif next_state_or_condition is None:
+                found_transition = False
+                for edge in self.graph.get_edges():
+                    if edge.get_source() == self.current_state:
+                        self.current_state = edge.get_destination()
+                        found_transition = True
+                        break
                 if not found_transition:
                     if self.current_state != '__end__':
                         print(f"No outgoing edges from state: {self.current_state}")
                         self.current_state = '__end__'
+            else:
+                # Invalid return type
+                print(f"Invalid return type from state function: {type(next_state_or_condition)}")
+                self.current_state = '__end__'
 
         print("Workflow finished.")
         print("Interaction History:")
         for interaction in self.interaction_history:
             print(f"- {interaction[0]}: {interaction[1]}")
 
-    def evaluate_condition(self, condition_string):
+    def evaluate_condition(self, label, condition):
         """
-        Evaluates a condition string.  This is a placeholder; you'll need
-        to implement your actual condition evaluation logic here.
+        Evaluates if the given label matches the condition.
         """
-        # VERY BASIC EXAMPLE:  Just checks if the condition string is "true" (case-insensitive)
-        if condition_string.lower() == "true":
-            return True
-        elif condition_string.lower() == "false":
-            return False
-        else:
-            print(f"invalid condition {condition_string}")
-            return False
-
+        return label == condition
 
     @staticmethod
     def from_dot_string(dot_string, state_functions):
@@ -130,7 +128,10 @@ class WFEngine:
         for node in nodes:
             graph.add_node(pydot.Node(node))
         for edge in edges:
-            graph.add_edge(pydot.Edge(edge[0], edge[1]))
+            if isinstance(edge, tuple):  # Regular edge
+                graph.add_edge(pydot.Edge(edge[0], edge[1]))
+            else:  # Edge with attributes (e.g., label)
+                graph.add_edge(pydot.Edge(edge['src'], edge['dst'], label=edge['label']))
         return WFEngine(graph, state_functions)
 
     def render_graph(self, filename="workflow", format="png"):
