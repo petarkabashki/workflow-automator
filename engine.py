@@ -1,5 +1,7 @@
 import asyncio
-import graphviz
+import networkx as nx
+from networkx.drawing.nx_pydot import parse_dot
+from io import StringIO
 
 class EngineExecutor:
     """
@@ -7,7 +9,7 @@ class EngineExecutor:
     and interaction history.
     """
 
-    def __init__(self, graph: graphviz.Source, state_functions):
+    def __init__(self, graph: nx.DiGraph, state_functions):
         self.graph = graph
         self.state_functions = state_functions
         self.context = {}  # Shared memory for state functions
@@ -74,23 +76,41 @@ class EngineExecutor:
                 # Method override
                 self.current_state = next_state
             else:
-                # DOT transition
+                # NetworkX-specific edge traversal
                 found_transition = False
-                for statement in self.graph.body:
-                    if statement.startswith(f'\t{self.current_state} ->'):
-                        parts = statement.split("->")
-                        self.current_state = parts[1].strip()
+                for u, v in self.graph.edges():  # Iterate through edges
+                    if u == self.current_state:
+                        self.current_state = v
                         found_transition = True
-                        break  # Only take the first transition
+                        break
 
                 if not found_transition:
-                    # No outgoing edges, stay in current state
                     if self.current_state != '__end__':
                         print(f"No outgoing edges from state: {self.current_state}")
-                        # Could raise an exception or handle differently
-                        self.current_state = '__end__' # Stop the execution
+                        self.current_state = '__end__'
 
         print("Workflow finished.")
         print("Interaction History:")
         for interaction in self.interaction_history:
             print(f"- {interaction[0]}: {interaction[1]}")
+
+    @staticmethod
+    def from_dot_string(dot_string, state_functions):
+        """Creates an EngineExecutor from a DOT string."""
+        graph = parse_dot(dot_string)
+        # Convert to DiGraph
+        di_graph = nx.DiGraph()
+        for node in graph.get_nodes():
+            di_graph.add_node(node.get_name())
+        for edge in graph.get_edges():
+            di_graph.add_edge(edge.get_source(), edge.get_destination())
+
+        return EngineExecutor(di_graph, state_functions)
+
+    @staticmethod
+    def from_nodes_and_edges(nodes, edges, state_functions):
+        """Creates an EngineExecutor from lists of nodes and edges."""
+        graph = nx.DiGraph()
+        graph.add_nodes_from(nodes)
+        graph.add_edges_from(edges)
+        return EngineExecutor(graph, state_functions)

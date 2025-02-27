@@ -15,49 +15,30 @@ if __name__ == "__main__":
 
 import pytest
 import asyncio
-import graphviz
+import networkx as nx  # Import NetworkX
 from engine import EngineExecutor
 from state_functions import StateFunctions
 from unittest.mock import AsyncMock
 
 @pytest.mark.asyncio
 async def test_engine_executor_initialization():
-    # Create a simple mock graph
-    dot = graphviz.Digraph()
-    dot.node('__start__')
-    dot.node('request_input')
-    dot.node('__end__')
-    dot.edge('__start__', 'request_input')
-    dot.edge('request_input', '__end__')
-
-    # Use the REAL StateFunctions now
+    # Create a simple NetworkX graph using from_nodes_and_edges
+    nodes = ['__start__', 'request_input', '__end__']
+    edges = [('__start__', 'request_input'), ('request_input', '__end__')]
     state_functions = StateFunctions()
-    engine = EngineExecutor(dot, state_functions)
+    engine = EngineExecutor.from_nodes_and_edges(nodes, edges, state_functions)
     assert engine is not None
 
 @pytest.mark.asyncio
 async def test_engine_executor_run():
-    # Create a simple mock graph
-    dot = graphviz.Digraph()
-    dot.node('__start__')
-    dot.node('request_input')
-    dot.node('extract_data')
-    dot.node('check_all_data_collected')
-    dot.node('ask_confirmation')
-    dot.node('process_data')
-    dot.node('__end__')
-
-    dot.edge('__start__', 'request_input')
-    dot.edge('request_input', 'extract_data')
-    dot.edge('extract_data', 'check_all_data_collected')
-    dot.edge('check_all_data_collected', 'ask_confirmation')
-    dot.edge('ask_confirmation', 'process_data')
-    dot.edge('process_data', '__end__')
-
-
-    # Use the REAL StateFunctions
+    # Create a simple NetworkX graph using from_nodes_and_edges
+    nodes = ['__start__', 'request_input', 'extract_data', 'check_all_data_collected',
+             'ask_confirmation', 'process_data', '__end__']
+    edges = [('__start__', 'request_input'), ('request_input', 'extract_data'),
+             ('extract_data', 'check_all_data_collected'), ('check_all_data_collected', 'ask_confirmation'),
+             ('ask_confirmation', 'process_data'), ('process_data', '__end__')]
     state_functions = StateFunctions()
-    engine = EngineExecutor(dot, state_functions)
+    engine = EngineExecutor.from_nodes_and_edges(nodes, edges, state_functions)
 
     # Mock _request_input to provide controlled input
     engine._request_input = AsyncMock(side_effect=["Test Name", "test@example.com", "yes"])
@@ -71,28 +52,20 @@ async def test_engine_executor_run():
 
 @pytest.mark.asyncio
 async def test_engine_executor_run_no_confirmation():
-    # Create a simple mock graph
-    dot = graphviz.Digraph()
-    dot.node('__start__')
-    dot.node('request_input')
-    dot.node('extract_data')
-    dot.node('check_all_data_collected')
-    dot.node('ask_confirmation')
-    dot.node('process_data')
-    dot.node('__end__')
-
-    dot.edge('__start__', 'request_input')
-    dot.edge('request_input', 'extract_data')
-    dot.edge('extract_data', 'check_all_data_collected')
-    dot.edge('check_all_data_collected', 'ask_confirmation')
-    dot.edge('ask_confirmation', 'process_data')
-    dot.edge('process_data', '__end__')
-    dot.edge('ask_confirmation', '__end__') # Add edge for 'no' case
-
-
-    # Use the REAL StateFunctions
+    # Create graph from DOT string
+    dot_string = """
+    digraph {
+        __start__ -> request_input;
+        request_input -> extract_data;
+        extract_data -> check_all_data_collected;
+        check_all_data_collected -> ask_confirmation;
+        ask_confirmation -> process_data;
+        ask_confirmation -> __end__;
+        process_data -> __end__;
+    }
+    """
     state_functions = StateFunctions()
-    engine = EngineExecutor(dot, state_functions)
+    engine = EngineExecutor.from_dot_string(dot_string, state_functions)
 
     # Mock _request_input to provide controlled input, including "no"
     engine._request_input = AsyncMock(side_effect=["Test Name", "test@example.com", "no"])
@@ -102,28 +75,20 @@ async def test_engine_executor_run_no_confirmation():
 
 @pytest.mark.asyncio
 async def test_engine_executor_run_invalid_confirmation():
-    # Create a simple mock graph
-    dot = graphviz.Digraph()
-    dot.node('__start__')
-    dot.node('request_input')
-    dot.node('extract_data')
-    dot.node('check_all_data_collected')
-    dot.node('ask_confirmation')
-    dot.node('process_data')
-    dot.node('__end__')
-
-    dot.edge('__start__', 'request_input')
-    dot.edge('request_input', 'extract_data')
-    dot.edge('extract_data', 'check_all_data_collected')
-    dot.edge('check_all_data_collected', 'ask_confirmation')
-    dot.edge('ask_confirmation', 'process_data')
-    dot.edge('process_data', '__end__')
-    dot.edge('ask_confirmation', '__end__') # Add edge for 'no' case
-
-
-    # Use the REAL StateFunctions
+     # Create graph from DOT string
+    dot_string = """
+    digraph {
+        __start__ -> request_input;
+        request_input -> extract_data;
+        extract_data -> check_all_data_collected;
+        check_all_data_collected -> ask_confirmation;
+        ask_confirmation -> process_data;
+        ask_confirmation -> __end__;
+        process_data -> __end__;
+    }
+    """
     state_functions = StateFunctions()
-    engine = EngineExecutor(dot, state_functions)
+    engine = EngineExecutor.from_dot_string(dot_string, state_functions)
 
     # Mock _request_input to provide controlled input, including invalid input AND subsequent inputs
     engine._request_input = AsyncMock(side_effect=["Test Name", "test@example.com", "invalid", "Test Name", "test@example.com", "yes"])
