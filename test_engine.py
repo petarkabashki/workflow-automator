@@ -153,3 +153,6 @@ class TestEngineExecutor(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(executor.interaction_history[2], ("system", "Enter your name:"))
         self.assertEqual(executor.interaction_history[3], ("user", "John Doe"))
         self.assertEqual(executor.interaction_history[4], ("system", "Transition to state: __end__"))
+
+if __name__ == '__main__':
+    unittest.main()
