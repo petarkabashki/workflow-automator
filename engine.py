@@ -75,11 +75,15 @@ class EngineExecutor:
                 self.current_state = next_state
             else:
                 # DOT transition
-                for edge in self.graph.edges():
-                    if edge[0] == self.current_state:
-                        self.current_state = edge[1]
+                found_transition = False
+                for statement in self.graph.body:
+                    if statement.startswith(f'\t{self.current_state} ->'):
+                        parts = statement.split("->")
+                        self.current_state = parts[1].strip()
+                        found_transition = True
                         break  # Only take the first transition
-                else:
+
+                if not found_transition:
                     # No outgoing edges, stay in current state
                     if self.current_state != '__end__':
                         print(f"No outgoing edges from state: {self.current_state}")
