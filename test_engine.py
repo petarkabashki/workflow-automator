@@ -17,16 +17,61 @@ import pytest
 import asyncio
 import pydot
 from engine import WFEngine
-from state_functions import StateFunctions
+# from state_functions import StateFunctions  # No longer needed
 from unittest.mock import AsyncMock
 import os
+
+# --- Custom Mock State Functions ---
+class MockStateFunctions:
+    async def request_input(self, context, executor):
+        name = await executor._request_input("Please enter your name:")
+        context["name"] = name
+        email = await executor._request_input("Please enter your email:")
+        context["email"] = email
+        return "data_collected", None
+
+    async def extract_data(self, context, executor):
+        print(f"Extracting  {context}")
+        return "data_extracted", None
+
+    async def check_all_data_collected(self, context, executor):
+        if "name" in context and "email" in context:
+            return "all_data_collected", None
+        else:
+            return None, "override_state"
+
+    async def ask_confirmation(self, context, executor):
+        confirmation = await executor._request_input("Do you confirm the data is correct? (yes/no)")
+        if confirmation.lower() == "yes":
+            return "confirmed", None
+        elif confirmation.lower() == "no":
+            return "not_confirmed", None
+        else:
+            return "invalid_confirmation", None
+
+    async def process_data(self, context, executor):
+        print("Processing ")
+        print(f"  Name: {context['name']}")
+        print(f"  Email: {context['email']}")
+        return "data_processed", None
+
+    async def __start__(self, context, executor):
+        return None, None  # No condition, no override
+
+    async def state1(self, context, executor):
+        if context.get("override_state_from_state1"):
+            return None, "override_state_target"
+        return None, None # Default
+
+# --- End Custom Mock State Functions ---
+
 
 @pytest.mark.asyncio
 async def test_engine_executor_initialization():
     # Create a simple pydot graph using from_nodes_and_edges
     nodes = ['__start__', 'request_input', '__end__']
     edges = [('__start__', 'request_input'), ('request_input', '__end__')]
-    state_functions = StateFunctions()
+    state_functions = MockStateFunctions()  # Use mock state functions
     engine = WFEngine.from_nodes_and_edges(nodes, edges, state_functions)
     assert engine is not None
 
@@ -43,7 +88,7 @@ async def test_engine_executor_run():
         {'src': 'ask_confirmation', 'dst': 'process_data', 'label': 'confirmed'},
         {'src': 'process_data', 'dst': '__end__', 'label': 'data_processed'}
     ]
-    state_functions = StateFunctions()
+    state_functions = MockStateFunctions()  # Use mock state functions
     engine = WFEngine.from_nodes_and_edges(nodes, edges, state_functions)
 
     # Mock _request_input to provide controlled input
@@ -70,7 +115,7 @@ async def test_engine_executor_run_no_confirmation():
         process_data -> __end__;
     }
     """
-    state_functions = StateFunctions()
+    state_functions = MockStateFunctions()  # Use mock state functions
     engine = WFEngine.from_dot_string(dot_string, state_functions)
 
     # Mock _request_input to provide controlled input, including "no"
@@ -93,7 +138,7 @@ async def test_engine_executor_run_invalid_confirmation():
         process_data -> __end__;
     }
     """
-    state_functions = StateFunctions()
+    state_functions = MockStateFunctions()  # Use mock state functions
     engine = WFEngine.from_dot_string(dot_string, state_functions)
 
 
@@ -109,7 +154,7 @@ async def test_engine_executor_render_graph(tmp_path):
     # Create a simple graph
     nodes = ['__start__', 'state1', '__end__']
     edges = [('__start__', 'state1'), ('state1', '__end__')]
-    state_functions = StateFunctions()  # Dummy state functions
+    state_functions = MockStateFunctions()  # Use mock state functions
     engine = WFEngine.from_nodes_and_edges(nodes, edges, state_functions)
 
     # Render the graph to a temporary file
@@ -136,7 +181,7 @@ async def test_engine_override_state():
         {'src': '__start__', 'dst': 'state1', 'label': 'to_state1'},
         {'src': 'state1', 'dst': '__end__', 'label': 'to_end'},
     ]
-    state_functions = StateFunctions()
+    state_functions = MockStateFunctions() # Use mock state functions
     engine = WFEngine.from_nodes_and_edges(nodes, edges, state_functions)
 
     # Set a flag in the context to trigger the override in _run_state
