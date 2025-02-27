@@ -142,8 +142,8 @@ async def test_engine_override_state():
     # Set a flag in the context to trigger the override in _run_state
     engine.context["override_state_from_state1"] = True
 
-    # Mock _request_input for the override_state case
-    engine._request_input = AsyncMock(return_value="override_state_target") #  the mock is not needed
+    # Mock _request_input for the override_state case.  It IS needed.
+    engine._request_input = AsyncMock(return_value="override_state_target")
 
     await engine.run()
     assert engine.current_state == "override_state_target"
