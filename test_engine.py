@@ -1,35 +1,24 @@
 import sys
+
+# VERY STRICT CHECK: If this file is run directly using the 'python' command
+# (and not 'pytest'), prevent execution.  We check the FIRST argument
+# in sys.argv.  If it ends with 'test_engine.py', we know it was run directly.
+if __name__ == "__main__":
+    if sys.argv[0].endswith("test_engine.py"):
+        print("\nERROR: Do not run this file directly with 'python test_engine.py'.")
+        print("       This will bypass pytest and cause errors.")
+        print("       Instead, run the `run_tests.sh` or `run_test.sh` script:")
+        print("       1. Make sure the script is executable: `chmod +x run_tests.sh` (or run_test.sh)")
+        print("       2. Run the script: `./run_tests.sh` (or ./run_test.sh)")
+        print("       This will install pytest and run the tests correctly.\n")
+        sys.exit(1)  # Exit with an error code
+
 import pytest
 import asyncio
 import graphviz
 from engine import EngineExecutor
 from state_functions import StateFunctions
 from unittest.mock import AsyncMock
-import psutil
-import os
-
-# Get the parent process name
-def get_parent_process_name():
-    try:
-        current_process = psutil.Process(os.getpid())
-        parent_process = current_process.parent()
-        return parent_process.name()
-    except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
-        return None
-
-# Check if the script is being run directly with 'python test_engine.py'
-# and NOT being called by run_tests.sh or run_test.sh
-if __name__ == "__main__":
-    parent_name = get_parent_process_name()
-    if parent_name not in ("bash", "sh", "pytest", "run_tests.sh", "run_test.sh"):
-        print("\nERROR: Do not run this file directly with 'python test_engine.py'.")
-        print("       This will bypass pytest and cause errors.")
-        print(f"       Instead, run the `run_tests.sh` or `run_test.sh` script:")
-        print("       1. Make sure the script is executable: `chmod +x run_tests.sh` (or run_test.sh)")
-        print(f"       2. Run the script: `./run_tests.sh` (or ./run_test.sh)")
-        print("       This will install pytest and run the tests correctly.\n")
-        sys.exit(1)  # Exit with an error code
-
 
 @pytest.mark.asyncio
 async def test_engine_executor_initialization():
