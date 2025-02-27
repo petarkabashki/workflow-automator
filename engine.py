@@ -75,13 +75,22 @@ class WFEngine:
                 # Method override
                 self.current_state = next_state
             else:
-                # pydot-specific edge traversal
+                # pydot-specific edge traversal with label checking
                 found_transition = False
                 for edge in self.graph.get_edges():
                     if edge.get_source() == self.current_state:
-                        self.current_state = edge.get_destination()
-                        found_transition = True
-                        break
+                        label = edge.get_label()  # Get the edge label
+                        if label:
+                            # VERY SIMPLE condition evaluation (replace with your logic)
+                            if self.evaluate_condition(label):
+                                self.current_state = edge.get_destination()
+                                found_transition = True
+                                break
+                        else:
+                            # Transition if there is no label
+                            self.current_state = edge.get_destination()
+                            found_transition = True
+                            break
 
                 if not found_transition:
                     if self.current_state != '__end__':
@@ -92,6 +101,21 @@ class WFEngine:
         print("Interaction History:")
         for interaction in self.interaction_history:
             print(f"- {interaction[0]}: {interaction[1]}")
+
+    def evaluate_condition(self, condition_string):
+        """
+        Evaluates a condition string.  This is a placeholder; you'll need
+        to implement your actual condition evaluation logic here.
+        """
+        # VERY BASIC EXAMPLE:  Just checks if the condition string is "true" (case-insensitive)
+        if condition_string.lower() == "true":
+            return True
+        elif condition_string.lower() == "false":
+            return False
+        else:
+            print(f"invalid condition {condition_string}")
+            return False
+
 
     @staticmethod
     def from_dot_string(dot_string, state_functions):
