@@ -2,9 +2,9 @@ import asyncio
 import pydot
 from io import StringIO
 
-class EngineExecutor:
+class WFEngine:
     """
-    The EngineExecutor class manages user interaction, engine observability,
+    The WFEngine class manages user interaction, engine observability,
     and interaction history.
     """
 
@@ -95,19 +95,19 @@ class EngineExecutor:
 
     @staticmethod
     def from_dot_string(dot_string, state_functions):
-        """Creates an EngineExecutor from a DOT string."""
+        """Creates an WFEngine from a DOT string."""
         (graph,) = pydot.graph_from_dot_data(dot_string)
-        return EngineExecutor(graph, state_functions)
+        return WFEngine(graph, state_functions)
 
     @staticmethod
     def from_nodes_and_edges(nodes, edges, state_functions):
-        """Creates an EngineExecutor from lists of nodes and edges."""
+        """Creates an WFEngine from lists of nodes and edges."""
         graph = pydot.Dot(graph_type='digraph')
         for node in nodes:
             graph.add_node(pydot.Node(node))
         for edge in edges:
             graph.add_edge(pydot.Edge(edge[0], edge[1]))
-        return EngineExecutor(graph, state_functions)
+        return WFEngine(graph, state_functions)
 
     def render_graph(self, filename="workflow", format="png"):
         """Renders the graph to a file."""

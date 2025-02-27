@@ -16,7 +16,7 @@ if __name__ == "__main__":
 import pytest
 import asyncio
 import pydot  # Import pydot
-from engine import EngineExecutor
+from engine import WFEngine  # Changed import
 from state_functions import StateFunctions
 from unittest.mock import AsyncMock
 import os
@@ -27,7 +27,7 @@ async def test_engine_executor_initialization():
     nodes = ['__start__', 'request_input', '__end__']
     edges = [('__start__', 'request_input'), ('request_input', '__end__')]
     state_functions = StateFunctions()
-    engine = EngineExecutor.from_nodes_and_edges(nodes, edges, state_functions)
+    engine = WFEngine.from_nodes_and_edges(nodes, edges, state_functions)  # Changed class name
     assert engine is not None
 
 @pytest.mark.asyncio
@@ -39,7 +39,7 @@ async def test_engine_executor_run():
              ('extract_data', 'check_all_data_collected'), ('check_all_data_collected', 'ask_confirmation'),
              ('ask_confirmation', 'process_data'), ('process_data', '__end__')]
     state_functions = StateFunctions()
-    engine = EngineExecutor.from_nodes_and_edges(nodes, edges, state_functions)
+    engine = WFEngine.from_nodes_and_edges(nodes, edges, state_functions)  # Changed class name
 
     # Mock _request_input to provide controlled input
     engine._request_input = AsyncMock(side_effect=["Test Name", "test@example.com", "yes"])
@@ -66,7 +66,7 @@ async def test_engine_executor_run_no_confirmation():
     }
     """
     state_functions = StateFunctions()
-    engine = EngineExecutor.from_dot_string(dot_string, state_functions)
+    engine = WFEngine.from_dot_string(dot_string, state_functions)  # Changed class name
 
     # Mock _request_input to provide controlled input, including "no"
     engine._request_input = AsyncMock(side_effect=["Test Name", "test@example.com", "no"])
@@ -89,7 +89,7 @@ async def test_engine_executor_run_invalid_confirmation():
     }
     """
     state_functions = StateFunctions()
-    engine = EngineExecutor.from_dot_string(dot_string, state_functions)
+    engine = WFEngine.from_dot_string(dot_string, state_functions)  # Changed class name
 
     # Mock _request_input to provide controlled input, including invalid input AND subsequent inputs
     engine._request_input = AsyncMock(side_effect=["Test Name", "test@example.com", "invalid", "Test Name", "test@example.com", "yes"])
@@ -108,7 +108,7 @@ async def test_engine_executor_render_graph(tmp_path):
     nodes = ['__start__', 'state1', '__end__']
     edges = [('__start__', 'state1'), ('state1', '__end__')]
     state_functions = StateFunctions()  # Dummy state functions
-    engine = EngineExecutor.from_nodes_and_edges(nodes, edges, state_functions)
+    engine = WFEngine.from_nodes_and_edges(nodes, edges, state_functions)  # Changed class name
 
     # Render the graph to a temporary file
     output_file = tmp_path / "test_graph.png"
