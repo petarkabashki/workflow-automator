@@ -55,7 +55,9 @@ class WFEngine:
         self.interaction_history.append(("system", f"Transition to state: {state_name}"))
 
         # Test-specific override using the context (for test_engine_override_state)
+        print(f"  _run_state: Checking override. state_name={state_name}, context={self.context}") # DEBUG
         if state_name == "state1" and self.context.get("override_state_from_state1"):
+            print("  _run_state: Override triggered!") # DEBUG
             return (None, "override_state_target")
 
         state_method = getattr(self.state_functions, state_name, None)
@@ -67,6 +69,7 @@ class WFEngine:
                 next_state_info = state_method(self.context, self)  # Still pass self for consistency
 
             # Handle the tuple return value
+            print(f"  _run_state: State function returned: {next_state_info}") # DEBUG
             if isinstance(next_state_info, tuple):
                 condition, state_override = next_state_info
                 return condition, state_override
@@ -75,15 +78,19 @@ class WFEngine:
                 return None, None # Default to no condition and no override
 
         else:
+            print(f"  _run_state: No state method found for {state_name}") # DEBUG
             return None, None  # No method associated, no condition, no override
 
     async def run(self):
         """Runs the workflow."""
         while self.current_state != "__end__":
+            print(f"run: Current state: {self.current_state}") # DEBUG
             condition, state_override = await self._run_state(self.current_state)
+            print(f"run: condition={condition}, state_override={state_override}") # DEBUG
 
             if state_override:
                 # Override state transition
+                print(f"run: Overriding to state: {state_override}") # DEBUG
                 self.current_state = state_override
             elif condition is not None:
                 # Condition string: find matching edge
