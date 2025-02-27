@@ -13,18 +13,8 @@ class WFEngine:
         self.context = {}  # Shared memory for state functions
         self.current_state = "__start__"
         self.interaction_history = []
-        self.lock = asyncio.Lock()  # Re-introducing the lock
+        self.lock = asyncio.Lock()  # Keep the lock for now, even if not used internally
         print(f"WFEngine initialized. Initial state: {self.current_state}") # DEBUG
-
-    async def _request_input(self, prompt, input_type="text"):  # Made async again
-        """Handles user input requests."""
-        async with self.lock:  # Use lock for async operations
-            print(prompt)
-            self.interaction_history.append(("system", prompt))
-            # Simulate waiting for input (replace with actual input mechanism)
-            await asyncio.sleep(0.1)
-            return self.context.get("last_input")
-
 
     async def _run_state(self, state_name):
         """Runs the state function associated with the given state name."""
@@ -45,7 +35,7 @@ class WFEngine:
             if asyncio.iscoroutinefunction(state_method):
                 next_state_info = await state_method(self.context, self)
             else:
-                next_state_info = state_method(self.context, self) #Should not happen
+                next_state_info = state_method(self.context, self)  # Should not happen
 
             # Handle the tuple return value
             print(f"  _run_state: State function returned: {next_state_info}") # DEBUG

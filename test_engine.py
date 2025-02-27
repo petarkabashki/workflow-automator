@@ -14,16 +14,17 @@ if __name__ == "__main__":
         sys.exit(1)  # Exit with an error code
 
 import pytest
-import asyncio  # Now needed again
+import asyncio
 import pydot
 from engine import WFEngine
 # from state_functions import StateFunctions  # No longer needed
-from unittest.mock import AsyncMock  # Use AsyncMock for async code
+from unittest.mock import AsyncMock
 import os
 
 # --- Custom Mock State Functions ---
 class MockStateFunctions:
     async def request_input(self, context, executor):
+        # Simulate user input by directly setting context values
         context["name"] = "Test Name"
         context["email"] = "test@example.com"
         return "data_collected", None
@@ -40,12 +41,14 @@ class MockStateFunctions:
 
     async def ask_confirmation(self, context, executor):
         # Simulate different confirmation responses based on context
-        if context.get("confirmation_response") == "no":
+        confirmation = context.get("confirmation_response", "yes")  # Default to "yes"
+        if confirmation.lower() == "yes":
+            return "confirmed", None
+        elif confirmation.lower() == "no":
             return "not_confirmed", None
-        elif context.get("confirmation_response") == "invalid":
-            return "invalid_confirmation", None
         else:
-            return "confirmed", None  # Default to "yes"
+            return "invalid_confirmation", None
+
 
     async def process_data(self, context, executor):
         print("Processing ")
@@ -64,7 +67,7 @@ class MockStateFunctions:
 # --- End Custom Mock State Functions ---
 
 
-@pytest.mark.asyncio  # Add this decorator back
+@pytest.mark.asyncio
 async def test_engine_executor_initialization():
     # Create a simple pydot graph using from_nodes_and_edges
     nodes = ['__start__', 'request_input', '__end__']
@@ -89,9 +92,7 @@ async def test_engine_executor_run():
     state_functions = MockStateFunctions()  # Use mock state functions
     engine = WFEngine.from_nodes_and_edges(nodes, edges, state_functions)
 
-    # Mock _request_input to provide controlled input, since it is an interaction
-    engine._request_input = AsyncMock(side_effect=["Test Name", "test@example.com", "yes"])
-
+    # No longer mocking _request_input; interactions happen within state functions
     await engine.run()
     assert engine.current_state == "__end__"
     assert "name" in engine.context
@@ -116,9 +117,8 @@ async def test_engine_executor_run_no_confirmation():
     state_functions = MockStateFunctions()  # Use mock state functions
     engine = WFEngine.from_dot_string(dot_string, state_functions)
 
-    # Mock _request_input to provide controlled input, including "no"
-    engine._request_input = AsyncMock(side_effect=["Test Name", "test@example.com", "no"])
-
+    # Set context to simulate "no" response
+    engine.context["confirmation_response"] = "no"
     await engine.run()
     assert engine.current_state == "__end__"  # Should still end, but via different path
 
@@ -139,9 +139,8 @@ async def test_engine_executor_run_invalid_confirmation():
     state_functions = MockStateFunctions()  # Use mock state functions
     engine = WFEngine.from_dot_string(dot_string, state_functions)
 
-    # Mock _request_input to provide controlled input, including invalid input AND subsequent inputs
-    engine._request_input = AsyncMock(side_effect=["Test Name", "test@example.com", "invalid", "Test Name", "test@example.com", "yes"])
-
+    # Set context to simulate "invalid" response, then engine will loop back to ask_confirmation
+    engine.context["confirmation_response"] = "invalid"
     await engine.run()
     assert engine.current_state == '__end__'
 
@@ -184,8 +183,6 @@ async def test_engine_override_state():
     # Set a flag in the context to trigger the override in _run_state
     engine.context["override_state_from_state1"] = True
 
-    # Mock _request_input for the override_state case.  It IS needed.
-    engine._request_input = AsyncMock(return_value="override_state_target")
-
+    # No longer mocking _request_input
     await engine.run()
     assert engine.current_state == "override_state_target"

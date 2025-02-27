@@ -7,10 +7,12 @@ class StateFunctions:
 
     async def request_input(self, context, executor):
         """Requests user input for name and email."""
-        name = await executor._request_input("Please enter your name:")
-        context["name"] = name
-        email = await executor._request_input("Please enter your email:")
-        context["email"] = email
+        print("Please enter your name:")
+        # In a real application, you'd get input here.  For testing,
+        # we'll use pre-set values or values from the context.
+        context["name"] = input()
+        print("Please enter your email:")
+        context["email"] = input()
         return "data_collected", None
 
     async def extract_data(self, context, executor):
@@ -27,7 +29,8 @@ class StateFunctions:
 
     async def ask_confirmation(self, context, executor):
         """Asks for confirmation from the user."""
-        confirmation = await executor._request_input("Do you confirm the data is correct? (yes/no)")
+        print("Do you confirm the data is correct? (yes/no)")
+        confirmation = input()
         if confirmation.lower() == "yes":
             return "confirmed", None
         elif confirmation.lower() == "no":
