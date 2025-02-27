@@ -1,0 +1,13 @@
+
+strict digraph {
+    __start__ -> request_input;
+    extract_data -> check_all_data_collected;
+    check_all_data_collected -> request_input;
+    request_input -> extract_data;
+
+    check_all_data_collected -> ask_confirmation;
+    ask_confirmation -> process_data;
+    ask_confirmation -> request_input;
+    ask_confirmation -> __end__;
+    process_data -> __end__;
+}

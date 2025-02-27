@@ -1,0 +1,6 @@
+.aider*
+.env
+.vscode
+.chainlit
+__pycache__
+
