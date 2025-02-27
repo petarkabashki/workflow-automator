@@ -1,11 +1,9 @@
-import asyncio
 import pydot
 from io import StringIO
 
 class WFEngine:
     """
-    The WFEngine class manages user interaction, engine observability,
-    and interaction history.
+    The WFEngine class manages state transitions and state method invocations.
     """
 
     def __init__(self, graph, state_functions):
@@ -14,41 +12,12 @@ class WFEngine:
         self.context = {}  # Shared memory for state functions
         self.current_state = "__start__"
         self.interaction_history = []
-        self.lock = asyncio.Lock()  # Asynchronous lock
+        # self.lock = asyncio.Lock()  # No longer needed (synchronous)
         print(f"WFEngine initialized. Initial state: {self.current_state}") # DEBUG
 
-    async def send_input(self, input_data):
-        """
-        Provides text/option input to the engine.
-        """
-        async with self.lock:
-            self.context["last_input"] = input_data
-            self.interaction_history.append(("user", input_data))
-            # Resume execution after input
-            self.resume_event.set()
+    # Removed send_input, upload_file, and _request_input
 
-    async def upload_file(self, file_path):
-        """
-        Provides file uploads to the engine.
-        """
-        async with self.lock:
-            self.context["last_file"] = file_path
-            self.interaction_history.append(("user", f"Uploaded file: {file_path}"))
-            # Resume execution after file upload
-            self.resume_event.set()
-
-    async def _request_input(self, prompt, input_type="text"):
-        """Handles user input requests."""
-        async with self.lock:
-            print(prompt)
-            self.interaction_history.append(("system", prompt))
-            self.resume_event = asyncio.Event()
-
-        # Pause workflow during input request
-        await self.resume_event.wait()
-        return self.context.get("last_input")
-
-    async def _run_state(self, state_name):
+    def _run_state(self, state_name):
         """Runs the state function associated with the given state name."""
 
         # Transition History
@@ -64,10 +33,8 @@ class WFEngine:
         state_method = getattr(self.state_functions, state_name, None)
 
         if state_method:
-            if asyncio.iscoroutinefunction(state_method):
-                next_state_info = await state_method(self.context, self)
-            else:
-                next_state_info = state_method(self.context, self)  # Still pass self for consistency
+            # Call the state function (synchronously)
+            next_state_info = state_method(self.context, self)
 
             # Handle the tuple return value
             print(f"  _run_state: State function returned: {next_state_info}") # DEBUG
@@ -82,11 +49,11 @@ class WFEngine:
             print(f"  _run_state: No state method found for {state_name}") # DEBUG
             return None, None  # No method associated, no condition, no override
 
-    async def run(self):
+    def run(self):
         """Runs the workflow."""
         while self.current_state != "__end__":
             print(f"run: Current state: {self.current_state}") # DEBUG
-            condition, state_override = await self._run_state(self.current_state)
+            condition, state_override = self._run_state(self.current_state)
             print(f"run: condition={condition}, state_override={state_override}") # DEBUG
 
             if state_override:
