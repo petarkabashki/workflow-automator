@@ -14,31 +14,31 @@ if __name__ == "__main__":
         sys.exit(1)  # Exit with an error code
 
 import pytest
-# import asyncio # No longer needed
+import asyncio  # Now needed again
 import pydot
 from engine import WFEngine
 # from state_functions import StateFunctions  # No longer needed
-from unittest.mock import Mock  # Use regular Mock for synchronous code
+from unittest.mock import AsyncMock  # Use AsyncMock for async code
 import os
 
 # --- Custom Mock State Functions ---
 class MockStateFunctions:
-    def request_input(self, context, executor):
+    async def request_input(self, context, executor):
         context["name"] = "Test Name"
         context["email"] = "test@example.com"
         return "data_collected", None
 
-    def extract_data(self, context, executor):
+    async def extract_data(self, context, executor):
         print(f"Extracting  {context}")
         return "data_extracted", None
 
-    def check_all_data_collected(self, context, executor):
+    async def check_all_data_collected(self, context, executor):
         if "name" in context and "email" in context:
             return "all_data_collected", None
         else:
             return None, "override_state"
 
-    def ask_confirmation(self, context, executor):
+    async def ask_confirmation(self, context, executor):
         # Simulate different confirmation responses based on context
         if context.get("confirmation_response") == "no":
             return "not_confirmed", None
@@ -47,16 +47,16 @@ class MockStateFunctions:
         else:
             return "confirmed", None  # Default to "yes"
 
-    def process_data(self, context, executor):
+    async def process_data(self, context, executor):
         print("Processing ")
         print(f"  Name: {context['name']}")
         print(f"  Email: {context['email']}")
         return "data_processed", None
 
-    def __start__(self, context, executor):
+    async def __start__(self, context, executor):
         return None, None  # No condition, no override
 
-    def state1(self, context, executor):
+    async def state1(self, context, executor):
         if context.get("override_state_from_state1"):
             return (None, "override_state_target")
         return None, None # Default
@@ -64,7 +64,8 @@ class MockStateFunctions:
 # --- End Custom Mock State Functions ---
 
 
-def test_engine_executor_initialization():
+@pytest.mark.asyncio  # Add this decorator back
+async def test_engine_executor_initialization():
     # Create a simple pydot graph using from_nodes_and_edges
     nodes = ['__start__', 'request_input', '__end__']
     edges = [('__start__', 'request_input'), ('request_input', '__end__')]
@@ -72,7 +73,8 @@ def test_engine_executor_initialization():
     engine = WFEngine.from_nodes_and_edges(nodes, edges, state_functions)
     assert engine is not None
 
-def test_engine_executor_run():
+@pytest.mark.asyncio
+async def test_engine_executor_run():
     # Create graph with labels for conditions
     nodes = ['__start__', 'request_input', 'extract_data', 'check_all_data_collected',
              'ask_confirmation', 'process_data', '__end__']
@@ -87,15 +89,18 @@ def test_engine_executor_run():
     state_functions = MockStateFunctions()  # Use mock state functions
     engine = WFEngine.from_nodes_and_edges(nodes, edges, state_functions)
 
-    # No longer mocking _request_input; directly setting context
-    engine.run()
+    # Mock _request_input to provide controlled input, since it is an interaction
+    engine._request_input = AsyncMock(side_effect=["Test Name", "test@example.com", "yes"])
+
+    await engine.run()
     assert engine.current_state == "__end__"
     assert "name" in engine.context
     assert "email" in engine.context
     assert engine.context["name"] == "Test Name"
     assert engine.context["email"] == "test@example.com"
 
-def test_engine_executor_run_no_confirmation():
+@pytest.mark.asyncio
+async def test_engine_executor_run_no_confirmation():
     # Create graph from DOT string with labels
     dot_string = """
     digraph {
@@ -111,12 +116,14 @@ def test_engine_executor_run_no_confirmation():
     state_functions = MockStateFunctions()  # Use mock state functions
     engine = WFEngine.from_dot_string(dot_string, state_functions)
 
-    # Set context to simulate "no" response
-    engine.context["confirmation_response"] = "no"
-    engine.run()
+    # Mock _request_input to provide controlled input, including "no"
+    engine._request_input = AsyncMock(side_effect=["Test Name", "test@example.com", "no"])
+
+    await engine.run()
     assert engine.current_state == "__end__"  # Should still end, but via different path
 
-def test_engine_executor_run_invalid_confirmation():
+@pytest.mark.asyncio
+async def test_engine_executor_run_invalid_confirmation():
     # Create graph from DOT string with labels
     dot_string = """
     digraph {
@@ -132,12 +139,14 @@ def test_engine_executor_run_invalid_confirmation():
     state_functions = MockStateFunctions()  # Use mock state functions
     engine = WFEngine.from_dot_string(dot_string, state_functions)
 
-    # Set context to simulate "invalid" response, then "yes"
-    engine.context["confirmation_response"] = "invalid"
-    engine.run()
+    # Mock _request_input to provide controlled input, including invalid input AND subsequent inputs
+    engine._request_input = AsyncMock(side_effect=["Test Name", "test@example.com", "invalid", "Test Name", "test@example.com", "yes"])
+
+    await engine.run()
     assert engine.current_state == '__end__'
 
-def test_engine_executor_render_graph(tmp_path):
+@pytest.mark.asyncio
+async def test_engine_executor_render_graph(tmp_path):
     """Tests the render_graph method."""
     # Create a simple graph
     nodes = ['__start__', 'state1', '__end__']
@@ -160,7 +169,8 @@ def test_engine_executor_render_graph(tmp_path):
     assert output_file_pdf.exists()
     assert output_file_pdf.stat().st_size > 0
 
-def test_engine_override_state():
+@pytest.mark.asyncio
+async def test_engine_override_state():
     """Tests the 'override_state' functionality."""
     # Create a simple graph
     nodes = ['__start__', 'state1', 'override_state_target', '__end__']
@@ -174,7 +184,8 @@ def test_engine_override_state():
     # Set a flag in the context to trigger the override in _run_state
     engine.context["override_state_from_state1"] = True
 
-    # No longer mocking _request_input
+    # Mock _request_input for the override_state case.  It IS needed.
+    engine._request_input = AsyncMock(return_value="override_state_target")
 
-    engine.run()
+    await engine.run()
     assert engine.current_state == "override_state_target"

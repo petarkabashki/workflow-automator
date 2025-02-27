@@ -1,3 +1,4 @@
+import asyncio
 import pydot
 from io import StringIO
 
@@ -12,12 +13,20 @@ class WFEngine:
         self.context = {}  # Shared memory for state functions
         self.current_state = "__start__"
         self.interaction_history = []
-        # self.lock = asyncio.Lock()  # No longer needed (synchronous)
+        self.lock = asyncio.Lock()  # Re-introducing the lock
         print(f"WFEngine initialized. Initial state: {self.current_state}") # DEBUG
 
-    # Removed send_input, upload_file, and _request_input
+    async def _request_input(self, prompt, input_type="text"):  # Made async again
+        """Handles user input requests."""
+        async with self.lock:  # Use lock for async operations
+            print(prompt)
+            self.interaction_history.append(("system", prompt))
+            # Simulate waiting for input (replace with actual input mechanism)
+            await asyncio.sleep(0.1)
+            return self.context.get("last_input")
 
-    def _run_state(self, state_name):
+
+    async def _run_state(self, state_name):
         """Runs the state function associated with the given state name."""
 
         # Transition History
@@ -33,8 +42,10 @@ class WFEngine:
         state_method = getattr(self.state_functions, state_name, None)
 
         if state_method:
-            # Call the state function (synchronously)
-            next_state_info = state_method(self.context, self)
+            if asyncio.iscoroutinefunction(state_method):
+                next_state_info = await state_method(self.context, self)
+            else:
+                next_state_info = state_method(self.context, self) #Should not happen
 
             # Handle the tuple return value
             print(f"  _run_state: State function returned: {next_state_info}") # DEBUG
@@ -49,11 +60,11 @@ class WFEngine:
             print(f"  _run_state: No state method found for {state_name}") # DEBUG
             return None, None  # No method associated, no condition, no override
 
-    def run(self):
+    async def run(self):
         """Runs the workflow."""
         while self.current_state != "__end__":
             print(f"run: Current state: {self.current_state}") # DEBUG
-            condition, state_override = self._run_state(self.current_state)
+            condition, state_override = await self._run_state(self.current_state)
             print(f"run: condition={condition}, state_override={state_override}") # DEBUG
 
             if state_override:
