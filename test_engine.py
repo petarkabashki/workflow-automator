@@ -98,10 +98,10 @@ async def test_engine_executor_run_invalid_confirmation():
 
 
     # Mock _request_input to provide controlled input, including invalid input AND subsequent inputs
-    engine._request_input = AsyncMock(side_effect=["Test Name", "test@example.com", "invalid", "yes"])
+    engine._request_input = AsyncMock(side_effect=["Test Name", "test@example.com", "invalid", "Test Name", "test@example.com", "yes"])
 
     await engine.run()
-    assert engine.current_state == 'process_data'
+    assert engine.current_state == '__end__'
 
 @pytest.mark.asyncio
 async def test_engine_executor_render_graph(tmp_path):

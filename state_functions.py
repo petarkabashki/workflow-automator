@@ -45,4 +45,4 @@ class StateFunctions:
 
     async def __start__(self, context, executor):
         """Start state"""
-        return "start_input"
+        return None
