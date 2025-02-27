@@ -125,8 +125,8 @@ async def test_engine_executor_run_invalid_confirmation():
     state_functions = StateFunctions()
     engine = EngineExecutor(dot, state_functions)
 
-    # Mock _request_input to provide controlled input, including invalid input
-    engine._request_input = AsyncMock(side_effect=["Test Name", "test@example.com", "invalid", "yes"])
+    # Mock _request_input to provide controlled input, including invalid input AND subsequent inputs
+    engine._request_input = AsyncMock(side_effect=["Test Name", "test@example.com", "invalid", "Test Name", "test@example.com", "yes"])
 
     await engine.run()
     assert engine.current_state == "__end__"
