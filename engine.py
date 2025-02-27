@@ -1,6 +1,6 @@
 import asyncio
 import networkx as nx
-from networkx.drawing.nx_pydot import parse_dot
+from networkx.drawing.nx_agraph import read_dot  # Changed import
 from io import StringIO
 
 class EngineExecutor:
@@ -97,15 +97,9 @@ class EngineExecutor:
     @staticmethod
     def from_dot_string(dot_string, state_functions):
         """Creates an EngineExecutor from a DOT string."""
-        graph = parse_dot(dot_string)
-        # Convert to DiGraph
-        di_graph = nx.DiGraph()
-        for node in graph.get_nodes():
-            di_graph.add_node(node.get_name())
-        for edge in graph.get_edges():
-            di_graph.add_edge(edge.get_source(), edge.get_destination())
+        graph = read_dot(StringIO(dot_string))  # Use read_dot and StringIO
+        return EngineExecutor(graph, state_functions)
 
-        return EngineExecutor(di_graph, state_functions)
 
     @staticmethod
     def from_nodes_and_edges(nodes, edges, state_functions):
