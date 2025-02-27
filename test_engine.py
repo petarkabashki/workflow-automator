@@ -60,7 +60,7 @@ class MockStateFunctions:
 
     async def state1(self, context, executor):
         if context.get("override_state_from_state1"):
-            return None, "override_state_target"
+            return (None, "override_state_target")
         return None, None # Default
 
 # --- End Custom Mock State Functions ---
