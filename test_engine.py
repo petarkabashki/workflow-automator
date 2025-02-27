@@ -19,6 +19,7 @@ import pydot  # Import pydot
 from engine import EngineExecutor
 from state_functions import StateFunctions
 from unittest.mock import AsyncMock
+import os
 
 @pytest.mark.asyncio
 async def test_engine_executor_initialization():
@@ -99,3 +100,27 @@ async def test_engine_executor_run_invalid_confirmation():
     assert "email" in engine.context
     assert engine.context["name"] == "Test Name"
     assert engine.context["email"] == "test@example.com"
+
+@pytest.mark.asyncio
+async def test_engine_executor_render_graph(tmp_path):
+    """Tests the render_graph method."""
+    # Create a simple graph
+    nodes = ['__start__', 'state1', '__end__']
+    edges = [('__start__', 'state1'), ('state1', '__end__')]
+    state_functions = StateFunctions()  # Dummy state functions
+    engine = EngineExecutor.from_nodes_and_edges(nodes, edges, state_functions)
+
+    # Render the graph to a temporary file
+    output_file = tmp_path / "test_graph.png"
+    engine.render_graph(filename=str(output_file.parent / output_file.stem), format="png")
+
+    # Check if the file exists
+    assert output_file.exists()
+    # Check file size to ensure it's not empty (basic check for rendering)
+    assert output_file.stat().st_size > 0
+
+    # Test with a different format
+    output_file_pdf = tmp_path / "test_graph.pdf"
+    engine.render_graph(filename=str(output_file_pdf.parent / output_file_pdf.stem), format="pdf")
+    assert output_file_pdf.exists()
+    assert output_file_pdf.stat().st_size > 0
