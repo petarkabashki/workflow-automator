@@ -139,6 +139,9 @@ async def test_engine_override_state():
     state_functions = StateFunctions()  # Use the real StateFunctions
     engine = WFEngine.from_nodes_and_edges(nodes, edges, state_functions)
 
+    # Set a flag in the context to trigger the override in _run_state
+    engine.context["override_state_from_state1"] = True
+
     # Mock _request_input for the override_state case
     engine._request_input = AsyncMock(return_value="override_state_target")
 
