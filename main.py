@@ -1,7 +1,6 @@
 import asyncio
-import graphviz
-from .engine import EngineExecutor
-from .state_functions import StateFunctions
+from engine import WFEngine  # Use the new class name
+from state_functions import StateFunctions
 
 async def main():
     """
@@ -12,17 +11,17 @@ async def main():
     with open("workflow.dot", "r") as f:
         dot_content = f.read()
 
-    # Parse the DOT file
-    graph = graphviz.Source(dot_content)
-
     # Initialize the state function class
     state_functions = StateFunctions()
 
-    # Initialize the engine executor
-    executor = EngineExecutor(graph, state_functions)
+    # Initialize the engine executor using from_dot_string
+    engine = WFEngine.from_dot_string(dot_content, state_functions)
+
+    # Render the graph
+    engine.render_graph()
 
     # Run the workflow
-    await executor.run()
+    await engine.run()
 
 if __name__ == "__main__":
     asyncio.run(main())
