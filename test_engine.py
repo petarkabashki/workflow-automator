@@ -1,17 +1,21 @@
+import sys
+
+# Check if the script is being run directly with 'python test_engine.py'
+if __name__ == "__main__" and "pytest" not in sys.modules:
+    print("\nERROR: Do not run this file directly with 'python test_engine.py'.")
+    print("       This will bypass pytest and cause errors.")
+    print("       Instead, run the `run_tests.sh` script:\n")
+    print("       1. Make sure `run_tests.sh` is executable: `chmod +x run_tests.sh`")
+    print("       2. Run the script: `./run_tests.sh`\n")
+    print("       This will install pytest and run the tests correctly.\n")
+    sys.exit(1)  # Exit with an error code
+
 import pytest
 import asyncio
 import graphviz
 from engine import EngineExecutor
-from state_functions import StateFunctions  # Import the actual StateFunctions
+from state_functions import StateFunctions
 from unittest.mock import AsyncMock
-
-# IMPORTANT: To run these tests, do NOT use `python test_engine.py` directly.
-# Instead, run the `run_tests.sh` script:
-#
-# 1. Make sure `run_tests.sh` is executable: `chmod +x run_tests.sh`
-# 2. Run the script: `./run_tests.sh`
-#
-# This will install pytest and run the tests correctly using the pytest framework.
 
 @pytest.mark.asyncio
 async def test_engine_executor_initialization():
@@ -127,4 +131,3 @@ async def test_engine_executor_run_invalid_confirmation():
     assert "email" in engine.context
     assert engine.context["name"] == "Test Name"
     assert engine.context["email"] == "test@example.com"
-
