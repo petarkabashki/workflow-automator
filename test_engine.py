@@ -4,12 +4,6 @@ from state_functions import StateFunctions
 from utils import strip_quotes
 import pydot
 from unittest.mock import patch
-import pytest
-from engine import WFEngine
-from state_functions import StateFunctions
-from utils import strip_quotes
-import pydot
-from unittest.mock import patch
 import logging
 import io
 
