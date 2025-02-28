@@ -61,7 +61,7 @@ class WFEngine:
         self.logger.info("Workflow started.")
         while True:
             if self.current_state == "__end__":
-                self.logger.info("Workflow finished. Current state: %s", self.current_state)
+                self.logger.info("Workflow finished.")
                 yield self.current_state, None, None
                 break
 
@@ -145,6 +145,6 @@ class WFEngine:
                 graph.add_edge(pydot.Edge(edge['src'], edge['dst'], label=edge['label']))
         return WFEngine(graph, state_functions)
 
-    def render_graph(self, filename="workflow", fmt="png"):
+    def render_graph(self, filename="workflow", format="png"):
         """Renders the graph to a file."""
-        self.graph.write(f"{filename}.{fmt}", format=fmt)
+        self.graph.write(f"{filename}.{format}", format=format)
