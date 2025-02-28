@@ -1,7 +1,7 @@
-import asyncio
 import pydot
 from io import StringIO
 from utils import strip_quotes
+
 class WFEngine:
     """
     The WFEngine class manages state transitions and state method invocations.
@@ -12,7 +12,6 @@ class WFEngine:
         self.graph = graph
         self.state_functions = state_functions
         self.current_state = "__start__"
-        self.lock = asyncio.Lock()
         self.observers = []  # List to store observers
 
     def subscribe(self, observer):
@@ -28,7 +27,7 @@ class WFEngine:
         for observer in self.observers:
             observer.notify(event_type, data)
 
-    async def _run_state(self, state_name):
+    def _run_state(self, state_name):
         """Runs the state function associated with the given state name."""
 
         self._notify_observers("state_function_call", {"state": state_name})
@@ -37,10 +36,7 @@ class WFEngine:
 
         if state_method:
             try:
-                if asyncio.iscoroutinefunction(state_method):
-                    next_state_info = await state_method()
-                else:
-                    next_state_info = state_method()  # Should not happen
+                next_state_info = state_method()
 
                 self._notify_observers("condition_received", {"state": state_name, "condition": next_state_info})
 
@@ -58,17 +54,17 @@ class WFEngine:
             self._notify_observers("error", {"state": state_name, "error": "No state method found"})
             return None, None
 
-    async def run(self):
+    def run(self):
         """Runs the workflow."""
         while self.current_state != "__end__":
             self._notify_observers("state_change", {"from": self.current_state, "to": None})  # Indicate upcoming change
-            condition, state_override = await self._run_state(self.current_state)
+            condition, state_override = self._run_state(self.current_state)
 
             if state_override:
                 self._notify_observers("state_override", {"from": self.current_state, "to": state_override})
                 self.current_state = state_override
                 self._notify_observers("state_change", {"from": None, "to": self.current_state}) # Indicate completed change
-                break  # Exit after override
+                continue  # Use continue instead of break
 
             elif condition is not None:
                 found_transition = False

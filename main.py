@@ -1,14 +1,9 @@
 #%% 
-import asyncio
 from engine import WFEngine
 from state_functions import StateFunctions
 from engine_observer import EngineObserver
 
-import nest_asyncio
-nest_asyncio.apply()
-
-
-async def main():
+def main():
     """
     Main entry point for the workflow automation application.
     """
@@ -31,12 +26,12 @@ async def main():
     engine.render_graph()
 
     # Run the workflow
-    await engine.run()
+    engine.run()
 
     # Save the log
     observer.save_log()
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
 
 # %%
