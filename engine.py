@@ -60,10 +60,10 @@ class WFEngine:
         """Runs the workflow as a generator."""
         self.logger.info("Workflow started.")
         
-        # Yield initial state before starting execution
-        yield self.current_state, None, None
-        
         while True:
+            # Always yield current state before processing
+            yield self.current_state, None, None
+            
             if self.current_state == "__end__":
                 self.logger.info("Workflow finished.")
                 yield self.current_state, None, None
