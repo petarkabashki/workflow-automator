@@ -37,14 +37,20 @@ def test_parse_simple_graph_with_nodes_and_edges(simple_dot_string):
     parser.parse(simple_dot_string)
     
     # Verify nodes
-    assert len(parser.nodes) == 3
-    assert any(node.get('label') == 'Start' for node in parser.nodes)
-    assert any(node.get('label') == 'End' for node in parser.nodes)
+    assert len(parser.nodes) == 3, "Expected 3 nodes"
+    labels = [node['label'] for node in parser.nodes]
+    assert 'Start' in labels, "Start node should be present"
+    assert 'Process1' in labels, "Process1 node should be present"
+    assert 'End' in labels, "End node should be present"
     
     # Verify edges
-    assert len(parser.edges) == 2
-    assert any(edge['source'] == 'Start' and edge['destination'] == 'Process1' for edge in parser.edges)
-    assert any(edge['source'] == 'Process1' and edge['destination'] == 'End' for edge in parser.edges)
+    assert len(parser.edges) == 2, "Expected 2 edges"
+    edge_sources = [edge['source'] for edge in parser.edges]
+    edge_destinations = [edge['destination'] for edge in parser.edges]
+    assert 'Start' in edge_sources, "Start node should be a source"
+    assert 'Process1' in edge_destinations, "Process1 node should be a destination"
+    assert 'Process1' in edge_sources, "Process1 node should be a source"
+    assert 'End' in edge_destinations, "End node should be a destination"
 
 # Node attribute tests
 def test_parse_node_attributes():
