@@ -11,7 +11,8 @@ class DotParser:
         dot_string = re.sub(r'//.*', '', dot_string)
         dot_string = dot_string.strip()
 
-        # Abort if unbalanced quotes.
+        # Abort if unbalanced quotes.  This is less relevant now,
+        # but still good to check for malformed input.
         if dot_string.count('"') % 2 != 0:
             return
 
@@ -28,16 +29,23 @@ class DotParser:
 
     def _parse_edge_connection(self, text):
         # Edge connection with label attribute: e.g. "Start" -> "End" [label = "OK"];
+        #  or Start -> End [label = "OK"];
         pattern_with_label = (
-            r'^(?P<source>"[^"]+")\s*->\s*(?P<destination>"[^"]+")\s*'
+            r'^(?P<source>"[^"]+"|[^"\s;-]+)\s*->\s*(?P<destination>"[^"]+"|[^"\s;-]+)\s*'
             r'(?:\[\s*label\s*=\s*"(?P<label>[^"]*)"\s*\])?\s*;?'
         )
 
         m = re.match(pattern_with_label, text)
         if m:
             statement_text = m.group(0)
-            source = m.group('source')[1:-1]  # Remove quotes
-            destination = m.group('destination')[1:-1]  # Remove quotes
+            source = m.group('source')
+            destination = m.group('destination')
+            # Remove quotes if present
+            if source.startswith('"') and source.endswith('"'):
+                source = source[1:-1]
+            if destination.startswith('"') and destination.endswith('"'):
+                destination = destination[1:-1]
+
             label = m.group('label')  # Can be None
 
             self._ensure_node_exists(source)

@@ -22,8 +22,8 @@ def test_unclosed_quote():
     assert len(parser.nodes) == 0
     assert len(parser.edges) == 0
 
-# Test parsing a simple graph with three nodes and two edges.
-def test_simple_graph_with_nodes_and_edges():
+# Test parsing a simple graph with three nodes and two edges (quoted).
+def test_simple_graph_with_nodes_and_edges_quoted():
     dot_string = '''
     "Start" -> "Process1";
     "Process1" -> "End";
@@ -32,6 +32,36 @@ def test_simple_graph_with_nodes_and_edges():
     parser.parse(dot_string)
     assert len(parser.nodes) == 3, "Expected 3 nodes"
     labels = [node.get('name') for node in parser.nodes] #check names, not labels
+    assert "Start" in labels
+    assert "Process1" in labels
+    assert "End" in labels
+    assert len(parser.edges) == 2
+
+# Test parsing a simple graph with three nodes and two edges (unquoted).
+def test_simple_graph_with_nodes_and_edges_unquoted():
+    dot_string = '''
+    Start -> Process1;
+    Process1 -> End;
+    '''
+    parser = DotParser()
+    parser.parse(dot_string)
+    assert len(parser.nodes) == 3, "Expected 3 nodes"
+    labels = [node.get('name') for node in parser.nodes]
+    assert "Start" in labels
+    assert "Process1" in labels
+    assert "End" in labels
+    assert len(parser.edges) == 2
+
+# Test parsing a simple graph with mixed quoted and unquoted nodes.
+def test_simple_graph_with_nodes_and_edges_mixed():
+    dot_string = '''
+    "Start" -> Process1;
+    Process1 -> "End";
+    '''
+    parser = DotParser()
+    parser.parse(dot_string)
+    assert len(parser.nodes) == 3, "Expected 3 nodes"
+    labels = [node.get('name') for node in parser.nodes]
     assert "Start" in labels
     assert "Process1" in labels
     assert "End" in labels
@@ -85,3 +115,23 @@ def test_incorrect_keyword():
     parser.parse(dot_string)
     assert len(parser.nodes) == 0
     assert len(parser.edges) == 0
+
+# Test unquoted node names with special characters (but valid).
+def test_unquoted_node_names_with_special_chars():
+    parser = DotParser()
+    dot_string = 'Start_Node -> End.Node;'
+    parser.parse(dot_string)
+    assert len(parser.nodes) == 2
+    assert len(parser.edges) == 1
+    assert parser.edges[0]['source'] == "Start_Node"
+    assert parser.edges[0]['destination'] == "End.Node"
+
+# Test unquoted node names with leading/trailing spaces (should be trimmed).
+def test_unquoted_node_names_with_spaces():
+    parser = DotParser()
+    dot_string = '   Start   ->   End   ;'
+    parser.parse(dot_string)
+    assert len(parser.nodes) == 2
+    assert len(parser.edges) == 1
+    assert parser.edges[0]['source'] == "Start"
+    assert parser.edges[0]['destination'] == "End"
