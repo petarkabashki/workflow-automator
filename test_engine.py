@@ -30,7 +30,21 @@ def create_test_engine(logger=None):
 
 def test_engine_creation_from_dot_string():
     logger = logging.getLogger('test_engine_creation_from_dot_string')
-    engine = create_test_engine(logger=logger)
+    dot_string = """
+    strict digraph {
+        start -> end;
+    }
+    """
+    print(f"DOT STRING: {dot_string}")
+    state_functions = StateFunctions()
+    setattr(state_functions, 'start', lambda: (None, 'end'))
+    engine = WFEngine.from_dot_string(dot_string, state_functions)
+    if logger:
+        engine.set_logger(logger)
+    if engine is None:
+        raise Exception("WFEngine.from_dot_string returned None")
+
+    print(f"GRAPH: {engine.graph}")
     assert engine is not None
     assert isinstance(engine.graph, pydot.Dot)
 
@@ -45,7 +59,21 @@ def test_engine_creation_from_nodes_and_edges():
 
 def test_state_execution():
     logger = logging.getLogger('test_state_execution')
-    engine = create_test_engine(logger=logger)
+    dot_string = """
+    strict digraph {
+        start -> end;
+    }
+    """
+    print(f"DOT STRING: {dot_string}")
+    state_functions = StateFunctions()
+    setattr(state_functions, 'start', lambda: (None, 'end'))
+    engine = WFEngine.from_dot_string(dot_string, state_functions)
+    if logger:
+        engine.set_logger(logger)
+    if engine is None:
+        raise Exception("WFEngine.from_dot_string returned None")
+
+    print(f"GRAPH: {engine.graph}")
     engine._run_state('start')
     assert engine.current_state == "__start__"  # Initial state
 
