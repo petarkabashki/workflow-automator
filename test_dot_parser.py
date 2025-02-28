@@ -31,19 +31,55 @@ def test_parse_malformed_string():
     assert len(parser.nodes) == 0
     assert len(parser.edges) == 0
 
-# 
+def test_parse_unclosed_quote():
+    """Test parsing with an unclosed quote."""
+    parser = DotParser()
+    parser.parse('node "Start { label = "Start"; }')
+    assert len(parser.nodes) == 0
+    assert len(parser.edges) == 0
+
+def test_parse_invalid_identifier():
+    """Test parsing with invalid characters in an identifier."""
+    parser = DotParser()
+    parser.parse('node "Start!" { label = "Start"; }')
+    assert len(parser.nodes) == 0  # Or handle the error as appropriate
+    assert len(parser.edges) == 0
+
+def test_parse_missing_semicolon():
+    """Test parsing with a missing semicolon."""
+    parser = DotParser()
+    parser.parse('node "Start" { label = "Start" } "Start" -> "End"')
+    assert len(parser.nodes) == 1 #parsing stops at the missing semicolon
+    assert len(parser.edges) == 0
+
+def test_parse_incorrect_keyword():
+    """Test parsing with an incorrect keyword."""
+    parser = DotParser()
+    parser.parse('nodee "Start" { label = "Start"; }')
+    assert len(parser.nodes) == 0
+    assert len(parser.edges) == 0
+
+def test_parse_duplicate_node():
+    """Test parsing with duplicate node declarations."""
+    parser = DotParser()
+    parser.parse('node "Start" { label = "A"; } node "Start" { label = "B"; }')
+     # Only the first declaration should be considered.
+    assert len(parser.nodes) == 1
+    assert parser.nodes[0]['label'] == 'A'
+
+#
 def test_parse_simple_graph_with_nodes_and_edges(simple_dot_string):
     """Test parsing of a simple graph with nodes and edges."""
     parser = DotParser()
     parser.parse(simple_dot_string)
-    
+
     # Verify nodes
     assert len(parser.nodes) == 3, "Expected 3 nodes"
     labels = [node['label'] for node in parser.nodes]
     assert 'Start' in labels, "Start node should be present"
     assert 'Process1' in labels, "Process1 node should be present"
     assert 'End' in labels, "End node should be present"
-    
+
     # Verify edges
     assert len(parser.edges) == 2, "Expected 2 edges"
     edge_sources = [edge['source'] for edge in parser.edges]
@@ -64,7 +100,7 @@ def test_parse_node_attributes():
     }
     '''
     parser.parse(dot_string)
-    
+
     assert len(parser.nodes) == 1
     node = parser.nodes[0]
     assert node['label'] == 'Test Node'
@@ -79,7 +115,7 @@ def test_parse_node_without_label():
     }
     '''
     parser.parse(dot_string)
-    
+
     assert len(parser.nodes) == 1
     node = parser.nodes[0]
     assert 'label' not in node
@@ -96,7 +132,7 @@ def test_parse_multiple_node_attributes():
     }
     '''
     parser.parse(dot_string)
-    
+
     assert len(parser.nodes) == 1
     node = parser.nodes[0]
     assert node['attributes'] == {
@@ -117,7 +153,7 @@ def test_parse_multiple_edge_attributes():
     "Start" -> "End"
     '''
     parser.parse(dot_string)
-    
+
     assert len(parser.edges) == 1
     edge = parser.edges[0]
     assert edge['source'] == 'Start'
@@ -137,7 +173,7 @@ def test_parse_edge_without_label():
     "Start" -> "End"
     '''
     parser.parse(dot_string)
-    
+
     assert len(parser.edges) == 1
     edge = parser.edges[0]
     assert edge['source'] == 'Start'
@@ -155,9 +191,78 @@ def test_parse_edge_attributes():
     "Start" -> "End"
     '''
     parser.parse(dot_string)
-    
+
     assert len(parser.edges) == 1
     edge = parser.edges[0]
     assert edge['source'] == 'Start'
     assert edge['destination'] == 'End'
     assert edge['attributes'] == {'color': 'red'}
+
+def test_parse_different_edge_connection():
+    """Test parsing of different edge connection styles (e.g., --)."""
+    parser = DotParser()
+    dot_string = '"Start" -- "End"'
+    parser.parse(dot_string)
+    assert len(parser.edges) == 1
+    assert parser.edges[0]['source'] == 'Start'
+    assert parser.edges[0]['destination'] == 'End'
+    assert parser.edges[0]['connector'] == '--'
+
+def test_parse_combined_node_and_edge_attributes():
+    """Test parsing of combined node and edge attributes."""
+    parser = DotParser()
+    dot_string = '''
+    node {
+        color = "blue";
+    }
+    edge {
+        style = "dashed";
+    }
+    "Start" -> "Process" {
+        color = "red";
+    };
+    "Process" -> "End";
+    '''
+    parser.parse(dot_string)
+    assert len(parser.nodes) == 1
+    assert len(parser.edges) == 2
+    assert parser.nodes[0]['attributes']['color'] == 'blue'
+    assert parser.edges[0]['attributes']['style'] == 'dashed'
+    assert parser.edges[0]['attributes']['color'] == 'red'  # Specific edge attr
+    assert parser.edges[1]['attributes']['style'] == 'dashed' #edge default carried
+    assert 'color' not in parser.edges[1]['attributes']
+
+def test_parse_comments():
+    """Test parsing of comments."""
+    parser = DotParser()
+    dot_string = '''
+    // This is a single-line comment
+    node "Start" {
+        label = "Start";  // Another comment
+    }
+    /*
+     * This is a
+     * multi-line comment.
+     */
+    "Start" -> "End";
+    '''
+    parser.parse(dot_string)
+    assert len(parser.nodes) == 1
+    assert len(parser.edges) == 1
+    assert parser.nodes[0]['label'] == 'Start'
+    assert parser.edges[0]['source'] == 'Start'
+    assert parser.edges[0]['destination'] == 'End'
+
+def test_node_no_attributes():
+    parser = DotParser()
+    dot_string = 'node "start";'
+    parser.parse(dot_string)
+    assert len(parser.nodes) == 1
+    assert 'attributes' not in parser.nodes[0]
+
+def test_edge_no_attributes():
+    parser = DotParser()
+    dot_string = '"start" -> "end";'
+    parser.parse(dot_string)
+    assert len(parser.edges) == 1
+    assert 'attributes' not in parser.edges[0]
