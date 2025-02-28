@@ -32,7 +32,7 @@ class WFEngine:
 
         # Transition History
         print(f"Transitioning to state: {state_name}")
-        self.state_functions.interaction_history.append(("system", f"Transition to state: {state_name}"))
+        # self.state_functions.interaction_history.append(("system", f"Transition to state: {state_name}")) # REMOVED
 
         # Test-specific override using the context (for test_engine_override_state)
         print(f"  _run_state: Checking override. state_name={state_name}") # DEBUG
