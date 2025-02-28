@@ -84,7 +84,7 @@ def test_run_method():
      
      # Define mock responses
      responses = ["OK", "OK", "Y", None]
-     states = ["request_input", "extract_n_check", "ask_confirmation", "process_data"]
+     states = ["__start__", "request_input", "extract_n_check", "ask_confirmation", "process_data"]
      
      i = 0
      for state, condition, state_override in workflow:
@@ -92,10 +92,5 @@ def test_run_method():
             break
         assert state == states[i]
         i += 1
-        # Send the mock response to the generator
-        # try:
-        #     next(workflow)
-        # except StopIteration:
-        #     break
 
      #assert engine.current_state == "__end__"
