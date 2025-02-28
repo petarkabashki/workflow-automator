@@ -1,13 +1,14 @@
 
 strict digraph {
     __start__ -> request_input;
-    extract_data -> check_all_data_collected;
-    check_all_data_collected -> request_input;
-    request_input -> extract_data;
+    request_input -> extract_n_check[label="OK"];
+    request_input -> request_input[label="NOK"];
+    // request_input -> __end__[label="QUIT"]
 
-    check_all_data_collected -> ask_confirmation;
-    ask_confirmation -> process_data;
-    ask_confirmation -> request_input;
-    ask_confirmation -> __end__;
+    extract_n_check -> request_input[label="NOK"];
+    extract_n_check -> ask_confirmation[label="OK"];
+    ask_confirmation -> process_data[label="OK"];
+    ask_confirmation -> request_input[label="NOK"];
+    ask_confirmation -> __end__[label="QUIT"];
     process_data -> __end__;
 }

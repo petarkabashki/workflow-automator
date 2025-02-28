@@ -2,6 +2,17 @@ import asyncio
 import pydot
 from io import StringIO
 
+def strip_quotes(text):
+    if not text: # Empty string
+        return text
+
+    first_char = text[0]
+    last_char = text[-1]
+
+    if (first_char == "'" and last_char == "'") or (first_char == '"' and last_char == '"'):
+        return text[1:-1]
+    else:
+        return text
 class WFEngine:
     """
     The WFEngine class manages state transitions and state method invocations.
@@ -24,10 +35,7 @@ class WFEngine:
         self.state_functions.interaction_history.append(("system", f"Transition to state: {state_name}"))
 
         # Test-specific override using the context (for test_engine_override_state)
-        print(f"  _run_state: Checking override. state_name={state_name}, context={self.state_functions.context}") # DEBUG
-        if state_name == "state1" and self.state_functions.context.get("override_state_from_state1"):
-            print("  _run_state: Override triggered!") # DEBUG
-            return (None, "override_state_target")
+        print(f"  _run_state: Checking override. state_name={state_name}") # DEBUG
 
         state_method = getattr(self.state_functions, state_name, None)
 
@@ -69,7 +77,7 @@ class WFEngine:
                 found_transition = False
                 for edge in self.graph.get_edges():
                     if edge.get_source() == self.current_state:
-                        label = edge.get_label()
+                        label = strip_quotes(edge.get_label())
                         if label and self.evaluate_condition(label, condition):
                             self.current_state = edge.get_destination()
                             found_transition = True

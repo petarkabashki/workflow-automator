@@ -33,7 +33,4 @@ This Python application implements an **asynchronous** state machine **execution
     *   Handling state transitions based on the DOT graph and return values from state functions.
     *   Rendering the graph (for visualization).
 
-**Example Usage (using `workflow.dot` and `state_functions.py`):**
-
-**`workflow.dot`:**
 

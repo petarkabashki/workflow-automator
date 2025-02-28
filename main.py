@@ -1,6 +1,11 @@
+#%% 
 import asyncio
 from engine import WFEngine  # Use the new class name
 from state_functions import StateFunctions
+
+import nest_asyncio
+nest_asyncio.apply()
+
 
 async def main():
     """
@@ -25,3 +30,5 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
+# %%

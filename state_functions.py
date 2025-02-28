@@ -16,10 +16,11 @@ class StateFunctions:
         print("Please enter your email:")
         self.context["email"] = input()
         # Check for any input, if empty, loop back
-        if not self.context["name"] or not self.context["email"]:
+        if not self.context["name"] or not self.context["email"] or not self.context["name"].strip() or not self.context["email"].strip():
             print("Name and email are required.")
             self.interaction_history.append(("user", f"Input: Name={self.context.get('name', '')}, Email={self.context.get('email', '')}"))
-            return "*", None  # Loop back to request_input
+            return "NOK", None  # Loop back to request_input
+        
         self.interaction_history.append(("user", f"Input: Name={self.context['name']}, Email={self.context['email']}"))
         return "OK", None
 
