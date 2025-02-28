@@ -63,9 +63,12 @@ class WFEngine:
         while True:
             self.logger.debug(f"Current state: {self.current_state}")
             
+            # First yield the current state before processing
+            condition, state_override = self._run_state(self.current_state)
+            yield self.current_state, condition, state_override
+            
             if self.current_state == "__end__":
                 self.logger.info("Workflow finished.")
-                yield self.current_state, None, None
                 break
             
             if self.current_state not in [strip_quotes(node.get_name()) for node in self.graph.get_nodes()]:
@@ -73,9 +76,6 @@ class WFEngine:
                 self.current_state = '__end__'
                 continue
                 
-            condition, state_override = self._run_state(self.current_state)
-
-            yield self.current_state, condition, state_override
 
             if state_override:
                 self.logger.debug(f"State override: {state_override}")
