@@ -56,14 +56,14 @@ class WFEngine:
         """Runs the workflow as a generator."""
         self.logger.info("Workflow started.")
         while True:
+            if self.current_state == "__end__":
+                self.logger.info("Workflow finished.")
+                break
+
             self.logger.debug(f"Current state: {self.current_state}")
             condition, state_override = self._run_state(self.current_state)
 
             yield self.current_state, condition, state_override
-
-            if self.current_state == "__end__":
-                self.logger.info("Workflow finished.")
-                break
 
             if state_override:
                 self.logger.debug(f"State override: {state_override}")
