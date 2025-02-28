@@ -1,9 +1,11 @@
 import logging
+# replase this with the DotParser in this project AI!
 import pydot
 import sys
 from io import StringIO
 from utils import strip_quotes
 
+# replace pydot with the DotParser. AI!
 class WFEngine:
     """
     The WFEngine class manages state transitions and state method invocations.
