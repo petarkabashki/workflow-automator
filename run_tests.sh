@@ -8,8 +8,8 @@ conda activate py311
 # Install pytest if it's not already installed
 pip install pytest
 
-# Run the dot parser tests
-pytest test_dot_parser.py -v
+# Run all tests
+pytest -v
 
 # Commented out previous tests
 # pytest test_engine.py
