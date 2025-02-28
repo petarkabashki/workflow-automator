@@ -10,6 +10,7 @@ class DotParser:
         dot_string = re.sub(r'/\*.*?\*/', '', dot_string, flags=re.DOTALL)
         dot_string = re.sub(r'//.*', '', dot_string)
         dot_string = dot_string.strip()
+        print(f"Parsing dot_string: '{dot_string}'")
 
         # Abort if unbalanced quotes.  This is less relevant now,
         # but still good to check for malformed input.
@@ -20,12 +21,21 @@ class DotParser:
         while dot_string:
             initial_length = len(dot_string)
             success, consumed, statement_text = self._parse_edge_connection(dot_string)
+            print(f"  Statement: '{statement_text}'")
+            print(f"  Success: {success}, Consumed: {consumed}")
             if success:
                 dot_string = dot_string[consumed:].lstrip()
+                print(f"  Remaining dot_string: '{dot_string}'")
                 if not statement_text.rstrip().endswith(';'):
                     dot_string = ""
             if not success or len(dot_string) == initial_length:
+                print("  Breaking loop")
                 break
+            print(f"  Nodes: {self.nodes}")
+            print(f"  Edges: {self.edges}")
+        print(f"Final Nodes: {self.nodes}")
+        print(f"Final Edges: {self.edges}")
+
 
     def _parse_edge_connection(self, text):
         # Edge connection with label attribute: e.g. "Start" -> "End" [label = "OK"];
