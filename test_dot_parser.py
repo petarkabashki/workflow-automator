@@ -28,8 +28,10 @@ def test_simple_graph_with_nodes_and_edges_quoted():
     "Start" -> "Process1";
     "Process1" -> "End";
     '''
+    
     parser = DotParser()
     parser.parse(dot_string)
+    # raise Exception (parser.nodes)
     assert len(parser.nodes) == 3, "Expected 3 nodes"
     labels = [node.get('name') for node in parser.nodes] #check names, not labels
     assert "Start" in labels

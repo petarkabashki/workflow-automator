@@ -25,12 +25,13 @@ class WFEngine:
         if self.logger:
             self.logger.debug(f"Running state: {state_name}")
 
-        if state_name not in self.state_functions:
+        # Check if the state function exists as a method in the StateFunctions instance
+        if not hasattr(self.state_functions, state_name):
             if self.logger:
                 self.logger.error(f"No function found for state: {state_name}")
             return None, None  # No function associated with the state
 
-        func = self.state_functions[state_name]
+        func = getattr(self.state_functions, state_name)
         try:
             result, next_state = func()
             return result, next_state
@@ -187,6 +188,7 @@ class WFEngine:
         if not parser.nodes or not parser.edges:
             raise ValueError("No graph could be created from DOT string. Check for parsing errors.")
 
+        # Extract node names from parser.nodes
         nodes = [utils.strip_quotes(node['name']).strip() for node in parser.nodes]
         
         # Build transitions dictionary

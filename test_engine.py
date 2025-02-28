@@ -147,9 +147,9 @@ def test_state_execution():
     setattr(state_functions, '__start__', lambda: (None, '__end__'))
     engine = WFEngine.from_dot_string(dot_string, state_functions)
     engine.set_logger(logger)
-    result, next_state = engine._run_state('start')
+    result, next_state = engine._run_state('__start__')
     assert result is None
-    assert next_state == 'end'
+    assert next_state == '__end__'
 
 def test_conditional_transition():
     logger = setup_test_logger('test_conditional_transition')

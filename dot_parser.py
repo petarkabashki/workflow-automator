@@ -17,6 +17,13 @@ class DotParser:
         if dot_string.count('"') % 2 != 0:
             return
 
+        # Handle 'strict digraph {}' wrapper
+        graph_match = re.match(r'strict\s+digraph\s*{(.*)}', dot_string, re.DOTALL)
+        if graph_match:
+            # Extract the content inside the graph declaration
+            dot_string = graph_match.group(1).strip()
+            print(f"Extracted graph content: '{dot_string}'")
+
         # Only parse edge connections.
         while dot_string:
             initial_length = len(dot_string)
