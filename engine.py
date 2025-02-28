@@ -1,5 +1,6 @@
 import logging
 import pydot
+import sys
 from io import StringIO
 from utils import strip_quotes
 
@@ -58,6 +59,10 @@ class WFEngine:
     def start(self):
         """Runs the workflow as a generator."""
         self.logger.info("Workflow started.")
+        
+        # Yield initial state before starting execution
+        yield self.current_state, None, None
+        
         while True:
             if self.current_state == "__end__":
                 self.logger.info("Workflow finished.")
