@@ -8,6 +8,8 @@ import logging
 import io
 import os
 
+
+# AI: always use './run_tests.sh' to run the tests
 def setup_test_logger(test_name):
     """Creates a logger that writes to a file in test_logs directory"""
     os.makedirs('test_logs', exist_ok=True)
