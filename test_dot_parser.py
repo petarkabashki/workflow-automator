@@ -5,9 +5,15 @@ from dot_parser import DotParser
 @pytest.fixture
 def simple_dot_string():
     return """
-node "Start" {
+    node "Start" {
         label = "Start";
     }
+    "Start" -> "Process1";
+    "Process1" -> "End";
+    "End" {
+        label = "End";
+    }
+    """
 
 def test_parse_multiple_edge_attributes():
     """Test parsing of multiple edge attributes."""
@@ -62,12 +68,6 @@ def test_parse_edge_without_label():
     assert edge['destination'] == 'End'
     assert 'label' not in edge
     assert edge['attributes'] == {'color': 'red'}
-    "Start" -> "Process1";
-    "Process1" -> "End";
-    "End" {
-        label = "End";
-    }
-    """
 
 def test_parse_simple_graph_with_nodes_and_edges(simple_dot_string):
     """Test parsing of a simple graph with nodes and edges."""
