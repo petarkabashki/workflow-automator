@@ -6,11 +6,29 @@ import pydot
 from unittest.mock import patch
 import logging
 import io
-
 import os
 
-# AI: Pass a custom logger that logs into an individual log file in the 'test_logs' folder for every test. Use these logs to inspect the engine's behavior.
-# every test needs to output the logs into a separate file in the test_logs folder for inspection. AI!
+def setup_test_logger(test_name):
+    """Creates a logger that writes to a file in test_logs directory"""
+    os.makedirs('test_logs', exist_ok=True)
+    logger = logging.getLogger(test_name)
+    logger.setLevel(logging.DEBUG)
+    
+    # Remove any existing handlers to avoid duplicate logging
+    logger.handlers = []
+    
+    # Create file handler
+    handler = logging.FileHandler(f'test_logs/{test_name}.log')
+    handler.setLevel(logging.DEBUG)
+    
+    # Create formatter
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    
+    # Add handler to logger
+    logger.addHandler(handler)
+    return logger
+
 def create_test_engine(logger=None):
     dot_string = """
     strict digraph {
@@ -30,7 +48,7 @@ def create_test_engine(logger=None):
     return engine
 
 def test_engine_creation_from_dot_string():
-    logger = logging.getLogger('test_engine_creation_from_dot_string')
+    logger = setup_test_logger('test_engine_creation_from_dot_string')
     dot_string = """
     strict digraph {
         start -> end;
@@ -59,7 +77,7 @@ def test_engine_creation_from_nodes_and_edges():
     assert isinstance(engine.graph, pydot.Dot)
 
 def test_state_execution():
-    logger = logging.getLogger('test_state_execution')
+    logger = setup_test_logger('test_state_execution')
     dot_string = """
     strict digraph {
         start -> end;
@@ -81,6 +99,7 @@ def test_state_execution():
         break
 
 def test_conditional_transition():
+    logger = setup_test_logger('test_conditional_transition')
     dot_string = """
     strict digraph {
         start -> a [label="OK"];
@@ -109,6 +128,7 @@ def test_strip_quotes():
     assert strip_quotes(None) == None
 
 def test_run_method(monkeypatch):
+    logger = setup_test_logger('test_run_method')
     dot_string = """
        strict digraph {
            __start__ -> request_input;
@@ -124,14 +144,6 @@ def test_run_method(monkeypatch):
    """
     state_functions = StateFunctions()
     
-    # Create a logger and a string buffer to capture log messages
-    log_stream = io.StringIO()
-    logger = logging.getLogger('test_logger')
-    logger.setLevel(logging.DEBUG)
-    handler = logging.StreamHandler(log_stream)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
 
     engine = WFEngine.from_dot_string(dot_string, state_functions)
     engine.set_logger(logger)
@@ -250,13 +262,6 @@ def test_run_method(monkeypatch):
         assert state == states[i]
         i += 1
 
-import logging
-import io
-
-import os
-
-# AI: Pass a custom logger that logs into an individual log file in the 'test_logs' folder for every test. Use these logs to inspect the engine's behavior.
-def create_test_engine(logger=None):
     dot_string = """
     strict digraph {
         start -> end;
