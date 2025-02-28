@@ -24,6 +24,8 @@ def create_test_engine(logger=None):
         engine.set_logger(logger)
     if engine is None:
         raise Exception("WFEngine.from_dot_string returned None")
+
+    print(f"GRAPH: {engine.graph}")
     return engine
 
 def test_engine_creation_from_dot_string():
