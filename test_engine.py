@@ -10,6 +10,7 @@ import io
 import os
 
 # AI: Pass a custom logger that logs into an individual log file in the 'test_logs' folder for every test. Use these logs to inspect the engine's behavior.
+# every test needs to output the logs into a separate file in the test_logs folder for inspection. AI!
 def create_test_engine(logger=None):
     dot_string = """
     strict digraph {
