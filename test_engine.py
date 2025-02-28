@@ -7,6 +7,7 @@ from unittest.mock import patch
 import logging
 import io
 
+# Pass a custom logger that logs into an individual log file in the 'test_logs' folder for every test. Use these logs to inspect the engine's behavior. AI!
 
 def create_test_engine():
     dot_string = """
