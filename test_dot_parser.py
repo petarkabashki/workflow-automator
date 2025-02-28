@@ -59,3 +59,34 @@ def test_parse_edge_attributes():
     assert edge['source'] == 'Start'
     assert edge['destination'] == 'End'
     assert edge['attributes'] == {'color': 'red'}
+
+def test_empty_string():
+    parser = DotParser()
+    parser.parse("")
+    assert len(parser.nodes) == 0
+    assert len(parser.edges) == 0
+
+def test_malformed_string():
+    parser = DotParser()
+    parser.parse("invalid dot syntax")
+    assert len(parser.nodes) == 0
+    assert len(parser.edges) == 0
+
+def test_multiple_attributes():
+    parser = DotParser()
+    dot_string = '''
+    node {
+        label = "Test";
+        shape = "ellipse";
+        color = "green";
+    }
+    '''
+    parser.parse(dot_string)
+    
+    assert len(parser.nodes) == 1
+    node = parser.nodes[0]
+    assert node['attributes'] == {
+        'label': 'Test',
+        'shape': 'ellipse',
+        'color': 'green'
+    }
