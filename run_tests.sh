@@ -9,7 +9,7 @@ conda activate py311
 pip install pytest
 
 # Run the dot parser tests
-pytest test_dot_parser.py -v
+pytest test_dot_parser.py test_parse_simple_graph_with_nodes_and_edges -v
 
 # Commented out previous tests
 # pytest test_engine.py
