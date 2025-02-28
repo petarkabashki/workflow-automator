@@ -55,7 +55,8 @@ def test_conditional_transition():
     """
     state_functions = StateFunctions()
     setattr(state_functions, 'start', lambda: ("OK", None))
-    engine = create_test_engine()
+    logger = logging.getLogger('test_conditional_transition')
+    engine = create_test_engine(logger=logger)
     
     # Run the engine as a generator
     workflow = engine.run()
