@@ -1,11 +1,11 @@
+import re
+
 class DotParser:
     """Parses a DOT language string into a graph structure."""
     
     def __init__(self):
         self.nodes = []
         self.edges = []
-        self.current_node = None
-        self.current_edge = None
         self.in_node = False
         self.in_edge = False
         
@@ -21,7 +21,6 @@ class DotParser:
             if line.startswith('node'):
                 self._parse_node(line)
                 self.in_node = True
-                self.in_edge = False
             elif line.startswith('edge'):
                 self._parse_edge(line)
                 self.in_node = False
@@ -29,40 +28,56 @@ class DotParser:
             elif '->' in line:
                 self._parse_edge_connection(line)
                 self.in_edge = False
-            elif line.startswith('"'):
-                self._parse_label(line)
-            elif line.startswith('{'):
-                if self.in_node:
-                    self.current_node = {'attributes': {}}
-                elif self.in_edge:
-                    self.current_edge = {'attributes': {}}
-            elif line.startswith('}'):
-                if self.in_node:
-                    self.nodes.append(self.current_node)
-                    self.current_node = None
-                    self.in_node = False
-                elif self.in_edge and self.current_edge:
-                    self.edges.append(self.current_edge)
-                    self.current_edge = None
-                    self.in_edge = False
     
     def _parse_node(self, line):
-        """Parse a node line."""
-        parts = line.split(' ', 1)
-        if len(parts) > 1:
-            node_name = parts[1].strip('"')
-            self.current_node = {'name': node_name, 'label': node_name, 'attributes': {}}
+        """Parses a node definition line."""
+        node_match = re.match(r'\s*(node\s*)?"([^"]+)"\s*\{(.*)\}', line)
+        if node_match:
+            node_name = node_match.group(2)
+            attributes_str = node_match.group(3).strip()
+            attributes = {}
+            if attributes_str:
+                # Split attributes by semicolon and parse each
+                for attr in attributes_str.split(';'):
+                    attr = attr.strip()
+                    if attr:
+                        if '=' in attr:
+                            key, value = attr.split('=', 1)
+                            attributes[key.strip()] = value.strip().strip('"')
+                        else:
+                            attributes[attr.strip()] = True  # Handle boolean attributes
+
+            self.nodes.append({'name': node_name, 'label': attributes.get('label', node_name), 'attributes': attributes})
         else:
-            self.current_node = {'name': '', 'label': '', 'attributes': {}}
+            node_match = re.match(r'\s*(node\s*)?"([^"]+)"\s*;', line)
+            if node_match:
+                node_name = node_match.group(2)
+                self.nodes.append({'name': node_name, 'label': node_name, 'attributes': {}})
     
     def _parse_edge(self, line):
-        """Parse an edge line."""
-        parts = line.split(' ', 1)
-        if len(parts) > 1:
-            edge_name = parts[1].strip('"')
-            self.current_edge = {'name': edge_name, 'attributes': {}}
-        else:
-            self.current_edge = {'name': '', 'attributes': {}}
+        """Parses an edge definition line."""
+        edge_match = re.match(r'\s*edge\s*\{(.*)\}', line)
+        if edge_match:
+            attributes_str = edge_match.group(1).strip()
+            attributes = {}
+            if attributes_str:
+                # Split attributes by semicolon and parse each
+                for attr in attributes_str.split(';'):
+                    attr = attr.strip()
+                    if attr:
+                        if '=' in attr:
+                            key, value = attr.split('=', 1)
+                            attributes[key.strip()] = value.strip().strip('"')
+                        else:
+                            attributes[attr.strip()] = True  # Handle boolean attributes
+            # The 'edge' block defines default attributes, not a specific edge
+            return  # Skip adding this as a separate edge
+
+        edge_match = re.match(r'\s*"([^"]+)"\s*->\s*"([^"]+)"\s*;', line)
+        if edge_match:
+            source_node = edge_match.group(1)
+            dest_node = edge_match.group(2)
+            self.edges.append({'source': source_node, 'destination': dest_node, 'attributes': {}})
     
     def _parse_edge_connection(self, line):
         """Parse an edge connection line."""
@@ -79,24 +94,8 @@ class DotParser:
             self.edges.append(edge)
     
     def _parse_label(self, line):
-        """Parse a label line."""
-        label = line.strip().strip('"')
-        if self.in_node and self.current_node:
-            self.current_node['label'] = label
-        elif self.in_edge and self.current_edge:
-            self.current_edge['label'] = label
-    
-    def _parse_attributes(self, attrs_str):
-        """Parse key=value pairs from a string."""
-        attributes = {}
-        if not attrs_str:
-            return attributes
-            
-        attrs = attrs_str.split(',')
-        for attr in attrs:
-            attr = attr.strip()
-            if '=' in attr:
-                key, value = attr.split('=', 1)
-                attributes[key.strip()] = value.strip().strip('"')
-                
-        return attributes
+        """Parses a label attribute."""
+        label_match = re.match(r'\s*label\s*=\s*"([^"]+)"\s*;', line)
+        if label_match:
+            return label_match.group(1)
+        return None
