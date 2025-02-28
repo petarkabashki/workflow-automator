@@ -59,5 +59,6 @@ class DotParser:
         return (False, 0, "")
 
     def _ensure_node_exists(self, name):
+        name = name.strip()
         if not any(n.get('name') == name for n in self.nodes):
             self.nodes.append({'name': name, 'label': name})
