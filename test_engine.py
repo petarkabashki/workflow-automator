@@ -4,19 +4,15 @@ from state_functions import StateFunctions
 from utils import strip_quotes
 import pydot
 from unittest.mock import patch
+import pytest
+from engine import WFEngine
+from state_functions import StateFunctions
+from utils import strip_quotes
+import pydot
+from unittest.mock import patch
 import logging
 import io
 
-# Pass a custom logger that logs into an individual log file in the 'test_logs' folder for every test. Use these logs to inspect the engine's behavior. AI!
-
-def create_test_engine():
-    dot_string = """
-    strict digraph {
-        start -> end;
-    }
-    """
-    state_functions = StateFunctions()
-    setattr(state_functions, 'start', lambda: (None, 'end'))
 def create_test_engine(logger=None):
     dot_string = """
     strict digraph {
@@ -215,3 +211,17 @@ def test_run_method(monkeypatch):
         i += 1
 
     #assert engine.current_state == "__end__"
+```
+
+test_engine.py
+```python
+<<<<<<< SEARCH
+import logging
+import io
+
+def create_test_engine(logger=None):
+    dot_string = """
+    strict digraph {
+        start -> end;
+    }
+    """
