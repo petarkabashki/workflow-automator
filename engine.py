@@ -1,5 +1,6 @@
 import logging
 import pydot
+import sys
 from io import StringIO
 from utils import strip_quotes
 
@@ -60,7 +61,7 @@ class WFEngine:
         self.logger.info("Workflow started.")
         while True:
             if self.current_state == "__end__":
-                self.logger.info("Workflow finished. Current state: %s", self.current_state)
+                self.logger.info("Workflow finished.")
                 yield self.current_state, None, None
                 break
 
@@ -115,8 +116,11 @@ class WFEngine:
     def evaluate_condition(self, label, condition):
         """
         Evaluates if the given label matches the condition.
+        Returns True if the label exactly matches the condition string.
         """
-        return label == condition
+        if not label or not condition:
+            return False
+        return str(label).strip() == str(condition).strip()
 
     @staticmethod
     def from_dot_string(dot_string, state_functions):
@@ -141,6 +145,6 @@ class WFEngine:
                 graph.add_edge(pydot.Edge(edge['src'], edge['dst'], label=edge['label']))
         return WFEngine(graph, state_functions)
 
-    def render_graph(self, filename="workflow", format="png"):
+    def render_graph(self, filename="workflow", fmt="png"):
         """Renders the graph to a file."""
-        self.graph.write(f"{filename}.{format}", format=format)
+        self.graph.write(f"{filename}.{fmt}", format=fmt)
