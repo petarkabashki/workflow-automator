@@ -100,9 +100,6 @@ class WFEngine:
             print(f"run: End of loop iteration. Current state: {self.current_state}") # DEBUG
 
         print("Workflow finished.")
-        print("Interaction History:")
-        for interaction in self.state_functions.interaction_history:
-            print(f"- {interaction[0]}: {interaction[1]}")
 
     def evaluate_condition(self, label, condition):
         """
