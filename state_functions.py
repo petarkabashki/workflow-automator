@@ -15,30 +15,30 @@ class StateFunctions:
         self.context["name"] = input()
         print("Please enter your email:")
         self.context["email"] = input()
-        return "data_collected", None
+        return "ok", None
 
     async def extract_data(self):
         """Extracts data from the context (no-op in this example)."""
         print(f"Extracting  {self.context}")
-        return "data_extracted", None
+        return "ok", None
 
     async def check_all_data_collected(self):
         """Checks if all required data is collected."""
         if "name" in self.context and "email" in self.context:
-            return "all_data_collected", None
+            return "y", None
         else:
-            return None, "override_state" # Example of using override
+            return "n", None # Example of using override
 
     async def ask_confirmation(self):
         """Asks for confirmation from the user."""
         print("Do you confirm the data is correct? (yes/no)")
         confirmation = input()
-        if confirmation.lower() == "yes":
-            return "confirmed", None
-        elif confirmation.lower() == "no":
-            return "not_confirmed", None
+        if confirmation.lower() in ["yes", "y"]:
+            return "y", None
+        elif confirmation.lower() in [ "no", "n"] :
+            return "n", None
         else:
-            return "invalid_confirmation", None
+            return "invalid_confirmation", "ask_confirmation"
 
 
     async def process_data(self):
