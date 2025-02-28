@@ -1,6 +1,5 @@
 import logging
 import pydot
-import sys
 from io import StringIO
 from utils import strip_quotes
 
@@ -119,8 +118,11 @@ class WFEngine:
         Returns True if the label exactly matches the condition string.
         """
         if not label or not condition:
+            self.logger.debug("Empty label or condition")
             return False
-        return str(label).strip() == str(condition).strip()
+        result = str(label).strip() == str(condition).strip()
+        self.logger.debug("Condition evaluation: %s == %s -> %s", label, condition, result)
+        return result
 
     @staticmethod
     def from_dot_string(dot_string, state_functions):
@@ -145,6 +147,6 @@ class WFEngine:
                 graph.add_edge(pydot.Edge(edge['src'], edge['dst'], label=edge['label']))
         return WFEngine(graph, state_functions)
 
-    def render_graph(self, filename="workflow", format="png"):
+    def render_graph(self, filename="workflow", fmt="png"):
         """Renders the graph to a file."""
-        self.graph.write(f"{filename}.{format}", format=format)
+        self.graph.write(f"{filename}.{fmt}", format=fmt)
