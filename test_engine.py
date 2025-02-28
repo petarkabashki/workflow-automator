@@ -109,13 +109,16 @@ def test_multiple_transitions_without_condition():
     state_functions = StateFunctions()
     # State function returns no condition but has multiple possible transitions
     setattr(state_functions, '__start__', lambda: (None, None))
-    setattr(state_functions, 'a', lambda: (None, None))
-    setattr(state_functions, 'b', lambda: (None, None))
+    setattr(state_functions, 'a', lambda: (None, "__end__"))
+    setattr(state_functions, 'b', lambda: (None, "__end__"))
 
     engine = WFEngine.from_dot_string(dot_string, state_functions)
     engine.set_logger(logger)
     engine.start() # start engine
-    assert engine.current_state == '__start__' #check initial state.
+    # The engine should have tried to transition but may not have succeeded
+    # due to multiple transitions without a clear condition
+    log_content = get_log_contents('test_multiple_transitions_without_condition')
+    assert "Multiple transitions available" in log_content
 
 def test_engine_creation_from_dot_string():
     logger = setup_test_logger('test_engine_creation_from_dot_string')
@@ -152,21 +155,22 @@ def test_conditional_transition():
     logger = setup_test_logger('test_conditional_transition')
     dot_string = """
     strict digraph {
-        __start__ -> a;
-        __start__ -> b;
+        __start__ -> a [label="OK (Success)"];
+        __start__ -> b [label="NOK (Failure)"];
         a -> __end__;
         b -> __end__;
     }
     """
     state_functions = StateFunctions()
     setattr(state_functions, '__start__', lambda: ("OK", None))
-    setattr(state_functions, 'a', lambda: (None, None))
-    setattr(state_functions, 'b', lambda: (None, None))
+    setattr(state_functions, 'a', lambda: (None, "__end__"))
+    setattr(state_functions, 'b', lambda: (None, "__end__"))
     engine = WFEngine.from_dot_string(dot_string, state_functions)
     engine.set_logger(logger)
     engine.start()
-    #  assert engine.current_state == 'a' # Removed condition.
-    assert "No function found for state" not in get_log_contents('test_conditional_transition')
+    log_content = get_log_contents('test_conditional_transition')
+    assert "Condition matched for transition" in log_content
+    assert "No function found for state" not in log_content
 
 def test_run_method(monkeypatch):
     logger = setup_test_logger('test_run_method')
@@ -200,6 +204,8 @@ def test_run_method(monkeypatch):
 
     def mock_process_data():
         return "OK", "__end__"
+    
+    setattr(state_functions, '__start__', lambda: (None, "request_input"))
     setattr(state_functions, 'request_input', mock_request_input)
     setattr(state_functions, 'extract_n_check', mock_extract_n_check)
     setattr(state_functions, 'ask_confirmation', mock_ask_confirmation)
@@ -208,4 +214,5 @@ def test_run_method(monkeypatch):
     engine = WFEngine.from_dot_string(dot_string, state_functions)
     engine.set_logger(logger)
     engine.start() # start
-    assert engine.current_state == '__start__'
+    log_content = get_log_contents('test_run_method')
+    assert "Workflow completed successfully" in log_content

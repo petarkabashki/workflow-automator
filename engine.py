@@ -54,7 +54,7 @@ class WFEngine:
             self.current_state = initial_state
             if self.logger:
                 self.logger.debug(f"Initial state: {self.current_state}")
-            self._run_state(self.current_state)  # Run the initial state
+            self.run()  # Start execution from the initial state
         else:
             if self.logger:
                 self.logger.error("No valid initial state found.")
@@ -100,6 +100,78 @@ class WFEngine:
                 self.logger.error(f"Error evaluating condition '{condition}': {e}")
             return False  # Consider condition as False on error
 
+    def run(self):
+        """
+        Executes the workflow starting from the current state.
+        Handles transitions between states based on state function results.
+        """
+        if not self.current_state:
+            if self.logger:
+                self.logger.error("No current state to run from.")
+            return
+
+        while self.current_state and self.current_state != "__end__":
+            if self.logger:
+                self.logger.debug(f"Current state: {self.current_state}")
+            
+            # Run the current state function
+            result, next_state = self._run_state(self.current_state)
+            
+            # If the state function specified the next state directly, use it
+            if next_state:
+                if self.logger:
+                    self.logger.debug(f"State function returned next state: {next_state}")
+                self.current_state = next_state
+                continue
+            
+            # Otherwise, check transitions from the current state
+            if self.current_state in self.transitions:
+                possible_transitions = self.transitions[self.current_state]
+                
+                if len(possible_transitions) == 1:
+                    # If only one transition, take it
+                    next_state, _ = possible_transitions[0]
+                    if self.logger:
+                        self.logger.debug(f"Taking only available transition to: {next_state}")
+                    self.current_state = next_state
+                elif len(possible_transitions) > 1:
+                    # Multiple transitions - need to evaluate conditions
+                    if self.logger:
+                        self.logger.debug(f"Multiple transitions available from {self.current_state}")
+                    
+                    # Try to find a transition that matches the result
+                    matched = False
+                    for dest, condition in possible_transitions:
+                        if self.evaluate_condition(result, condition):
+                            if self.logger:
+                                self.logger.debug(f"Condition matched for transition to {dest}")
+                            self.current_state = dest
+                            matched = True
+                            break
+                    
+                    if not matched:
+                        # No matching transition found
+                        if self.logger:
+                            self.logger.warning(f"No matching transition found for result: {result}")
+                        break
+                else:
+                    # No transitions defined
+                    if self.logger:
+                        self.logger.warning(f"No transitions defined from state: {self.current_state}")
+                    break
+            else:
+                # No transitions from current state
+                if self.logger:
+                    self.logger.warning(f"No transitions defined from state: {self.current_state}")
+                break
+
+        if self.current_state == "__end__":
+            if self.logger:
+                self.logger.debug("Workflow completed successfully")
+        else:
+            if self.logger:
+                self.logger.warning("Workflow stopped without reaching end state")
+
     @staticmethod
     def from_dot_string(dot_string, state_functions):
         """Creates an WFEngine from a DOT string."""
@@ -109,28 +181,33 @@ class WFEngine:
             raise ValueError("No graph could be created from DOT string. Check for parsing errors.")
 
         nodes = [node['name'].strip() for node in parser.nodes]
-        edges = []
+        
+        # Build transitions dictionary
+        transitions = {}
         for edge in parser.edges:
             source = edge['source'].strip()
             destination = edge['destination'].strip()
             label = edge.get('attributes', {}).get('label', '')  # Default to empty string if no label
-            edges.append((source, destination, label))
-
-        return WFEngine.from_nodes_and_edges(nodes, edges, state_functions)
+            
+            if source not in transitions:
+                transitions[source] = []
+            
+            # Extract condition from label if present
+            condition = ""
+            if label and "(" in label and ")" in label:
+                parts = label.split("(", 1)
+                if len(parts) > 1:
+                    condition = parts[1].rsplit(")", 1)[0].strip()
+            
+            transitions[source].append((destination, condition))
+        
+        return WFEngine(nodes, transitions, None, state_functions)
 
     @staticmethod
     def from_nodes_and_edges(nodes, edges, state_functions):
         """Creates an WFEngine from lists of nodes and edges."""
         # For now, raise a NotImplementedError.  This method is not yet used.
         raise NotImplementedError("Use from_dot_string instead")
-        states = nodes
-        transitions = {}
-        for source, destination, label in edges:
-            if source not in transitions:
-                transitions[source] = []
-            transitions[source].append((destination, label))
-
-        return WFEngine(states, transitions, None, state_functions)
 
     def render_graph(self, output_file="workflow", format_type="png"):
         """
