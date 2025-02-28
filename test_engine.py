@@ -13,6 +13,9 @@ from unittest.mock import patch
 import logging
 import io
 
+import os
+
+# AI: Pass a custom logger that logs into an individual log file in the 'test_logs' folder for every test. Use these logs to inspect the engine's behavior.
 def create_test_engine(logger=None):
     dot_string = """
     strict digraph {
@@ -27,7 +30,8 @@ def create_test_engine(logger=None):
     return engine
 
 def test_engine_creation_from_dot_string():
-    engine = create_test_engine()
+    logger = logging.getLogger('test_engine_creation_from_dot_string')
+    engine = create_test_engine(logger=logger)
     assert engine is not None
     assert isinstance(engine.graph, pydot.Dot)
 
@@ -41,7 +45,8 @@ def test_engine_creation_from_nodes_and_edges():
     assert isinstance(engine.graph, pydot.Dot)
 
 def test_state_execution():
-    engine = create_test_engine()
+    logger = logging.getLogger('test_state_execution')
+    engine = create_test_engine(logger=logger)
     engine._run_state('start')
     assert engine.current_state == "__start__"  # Initial state
 
