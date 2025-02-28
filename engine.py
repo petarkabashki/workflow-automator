@@ -86,8 +86,9 @@ class WFEngine:
                 for edge in self.graph.get_edges():
                     if edge.get_source() == self.current_state:
                         label = strip_quotes(edge.get_label())
-                        if label and self.evaluate_condition(label, condition):
-                            self._notify_observers("transition", {"from": self.current_state, "to": edge.get_destination(), "condition": condition})
+                        short_label = label.split(" ")[0]  # Extract the short code
+                        if short_label and self.evaluate_condition(short_label, condition):
+                            self._notify_observers("transition", {"from": self.current_state, "to": edge.get_destination(), "condition": condition, "label": label}) # Include full label
                             self.current_state = edge.get_destination()
                             found_transition = True
                             break
@@ -98,7 +99,8 @@ class WFEngine:
                 found_transition = False
                 for edge in self.graph.get_edges():
                     if edge.get_source() == self.current_state:
-                        self._notify_observers("transition", {"from": self.current_state, "to": edge.get_destination(), "condition": None})
+                        label = strip_quotes(edge.get_label()) # get the label
+                        self._notify_observers("transition", {"from": self.current_state, "to": edge.get_destination(), "condition": None, "label":label}) # pass label
                         self.current_state = edge.get_destination()
                         found_transition = True
                         break

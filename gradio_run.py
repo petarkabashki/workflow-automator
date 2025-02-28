@@ -2,8 +2,9 @@
 from engine import WFEngine
 from engine_observer import EngineObserver
 import gradio as gr
-
 import asyncio
+import contextlib
+import io
 
 class StateFunctions:
     """
@@ -17,15 +18,18 @@ class StateFunctions:
     async def request_input(self):
         """Requests user input for name and email."""
         print("Please enter your name:")
-        self.context["name"] = input()
+        name = await self.get_input()
         print("Please enter your email:")
-        self.context["email"] = input()
+        email = await self.get_input()
+        self.context["name"] = name
+        self.context["email"] = email
+
         # Check for any input, if empty, loop back
         if not self.context["name"] or not self.context["email"] or not self.context["name"].strip() or not self.context["email"].strip():
             print("Name and email are required.")
             self.interaction_history.append(("user", f"Input: Name={self.context.get('name', '')}, Email={self.context.get('email', '')}"))
             return "NOK", None  # Loop back to request_input
-        
+
         self.interaction_history.append(("user", f"Input: Name={self.context['name']}, Email={self.context['email']}"))
         return "OK", None
 
@@ -41,7 +45,7 @@ class StateFunctions:
     async def ask_confirmation(self):
         """Asks for confirmation from the user."""
         print("Do you confirm the data is correct? (yes/no/quit)")
-        confirmation = input()
+        confirmation = await self.get_input()
         self.interaction_history.append(("user", f"Confirmation input: {confirmation}"))
         if confirmation.lower() in ["yes", "y"]:
             return "Y", None
@@ -67,7 +71,9 @@ class StateFunctions:
         self.interaction_history.append(("system", "Workflow started."))
         return None, None
 
-
+    async def get_input(self):
+        """Placeholder for getting input.  This will be filled in by Gradio."""
+        raise NotImplementedError("get_input must be overridden")
 
 # Load the DOT file
 with open("workflow.dot", "r") as f:
@@ -86,16 +92,60 @@ engine.subscribe(observer)
 # Render the graph
 engine.render_graph()
 
-# Run the workflow
-# await engine.run()
+async def respond_to_user_message(message, history):
+    """Handles user input and engine progression."""
 
-def respond_to_user_message(message, history):
-    yield message
+    # 1. Set the input function for the state functions.
+    async def get_user_input():
+        nonlocal message
+        return message
 
+    state_functions.get_input = get_user_input
+    transition_label = "" # store label
+
+    # 2. Capture stdout to display in the chatbot.
+    with io.StringIO() as buf, contextlib.redirect_stdout(buf):
+        # 3. Run the current state.
+        if engine.current_state != "__end__":
+            condition, override = await engine._run_state(engine.current_state)
+            if override:
+                engine.current_state = override
+            elif condition:
+                for edge in engine.graph.get_edges():
+                    if edge.get_source() == engine.current_state:
+                        label = engine.strip_quotes(edge.get_label())
+                        short_label = label.split(" ")[0]  # Extract the short code
+                        if short_label and engine.evaluate_condition(short_label, condition):
+                            engine.current_state = edge.get_destination()
+                            transition_label = label # store for display
+                            break
+            else: # transition with no condition
+                for edge in engine.graph.get_edges():
+                    if edge.get_source() == engine.current_state:
+                        label = engine.strip_quotes(edge.get_label())
+                        transition_label = label # store for display
+                        engine.current_state = edge.get_destination()
+                        break
+
+        # 4. Get the captured output.
+        captured_output = buf.getvalue()
+
+    # 5. Update history and return.
+    history.append((message, captured_output + f"\n\n*Next Transition: {transition_label}*")) # show transition
+
+    # 6. If engine finished, reset for next interaction
+    if engine.current_state == "__end__":
+        history.append((None, "Workflow finished. Starting over."))
+        engine.current_state = "__start__"
+        state_functions.context = {} # clear context
+        state_functions.interaction_history = []
+
+    return "", history
 
 demo = gr.ChatInterface(
     respond_to_user_message,
-    type="messages"
+    chatbot=gr.Chatbot(type="messages"),
+    type="text"
 )
 
 demo.launch()
