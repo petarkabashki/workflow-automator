@@ -1,3 +1,4 @@
+import logging
 import pydot
 from io import StringIO
 from utils import strip_quotes
@@ -12,8 +13,24 @@ class WFEngine:
         self.state_functions = state_functions
         self.current_state = "__start__"
 
+        # Configure logging
+        self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(logging.DEBUG)  # Set the desired log level
+
+        # Create a handler (e.g., file handler)
+        fh = logging.FileHandler('engine_log.txt')
+        fh.setLevel(logging.DEBUG)
+
+        # Create a formatter and set it on the handler
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        fh.setFormatter(formatter)
+
+        # Add the handler to the logger
+        self.logger.addHandler(fh)
+
     def _run_state(self, state_name):
         """Runs the state function associated with the given state name."""
+        self.logger.debug(f"Running state: {state_name}")
 
         state_method = getattr(self.state_functions, state_name, None)
 
@@ -28,17 +45,22 @@ class WFEngine:
                     return None, None
 
             except Exception as e:
+                self.logger.exception(f"Exception in state {state_name}")
                 raise  # Re-raise the exception to halt execution
 
         else:
+            self.logger.warning(f"No state method found for {state_name}")
             return None, None
 
     def run(self):
         """Runs the workflow."""
+        self.logger.info("Workflow started.")
         while self.current_state != "__end__":
+            self.logger.debug(f"Current state: {self.current_state}")
             condition, state_override = self._run_state(self.current_state)
 
             if state_override:
+                self.logger.debug(f"State override: {state_override}")
                 self.current_state = state_override
                 continue  # Use continue instead of break
 
@@ -49,24 +71,28 @@ class WFEngine:
                         label = strip_quotes(edge.get_label())
                         short_label = label.split(" ")[0]  # Extract the short code
                         if short_label and self.evaluate_condition(short_label, condition):
+                            self.logger.debug(f"Transitioning to {edge.get_destination()} based on condition {condition}")
                             self.current_state = edge.get_destination()
                             found_transition = True
                             break
                 if not found_transition:
+                    self.logger.warning(f"No transition found for condition {condition}")
                     self.current_state = '__end__'
             else:
                 found_transition = False
                 for edge in self.graph.get_edges():
                     if edge.get_source() == self.current_state:
                         label = strip_quotes(edge.get_label()) # get the label
+                        self.logger.debug(f"Transitioning to {edge.get_destination()} without condition")
                         self.current_state = edge.get_destination()
                         found_transition = True
                         break
                 if not found_transition:
                     if self.current_state != '__end__':
+                        self.logger.warning("No transition found without condition, ending workflow.")
                         self.current_state = '__end__'
 
-        
+        self.logger.info("Workflow finished.")
 
 
     def evaluate_condition(self, label, condition):
