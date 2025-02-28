@@ -1,7 +1,7 @@
 #%% 
 from engine import WFEngine
 from state_functions import StateFunctions
-from engine_observer import EngineObserver
+# from engine_observer import EngineObserver # No longer needed
 
 def main():
     """
@@ -19,8 +19,8 @@ def main():
     engine = WFEngine.from_dot_string(dot_content, state_functions)
 
     # Create and subscribe the observer
-    observer = EngineObserver()
-    engine.subscribe(observer)
+    # observer = EngineObserver() # No longer needed
+    # engine.subscribe(observer) # No longer needed
 
     # Render the graph
     engine.render_graph()
@@ -29,7 +29,7 @@ def main():
     engine.run()
 
     # Save the log
-    observer.save_log()
+    # observer.save_log() # No longer needed
 
 if __name__ == "__main__":
     main()
