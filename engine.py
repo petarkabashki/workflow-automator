@@ -63,14 +63,10 @@ class WFEngine:
         while True:
             self.logger.debug(f"Current state: {self.current_state}")
             
-            # Always yield current state before processing
-            yield self.current_state, None, None
-            
             if self.current_state == "__end__":
                 self.logger.info("Workflow finished.")
+                yield self.current_state, None, None
                 break
-
-            self.logger.debug(f"Current state: {self.current_state}")
             
             if self.current_state not in [strip_quotes(node.get_name()) for node in self.graph.get_nodes()]:
                 self.logger.error("Current state %s not found in graph", self.current_state)
