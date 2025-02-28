@@ -12,4 +12,4 @@ pip install pytest
 pytest test_dot_parser.py -v
 
 # Commented out previous tests
-# pytest test_engine.py
+pytest test_engine.py
