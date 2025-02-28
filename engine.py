@@ -1,138 +1,102 @@
-import logging
-import sys
-from io import StringIO
-from utils import strip_quotes
-from dot_parser import DotParser
-
 class WFEngine:
     """
     The WFEngine class manages state transitions and state method invocations.
+    It supports conditional transitions, state-specific methods,
+    and integration with external systems.
     """
 
-    def __init__(self, graph, state_functions):
-        self.graph = graph
-        self.state_functions = state_functions
-        self.current_state = "__start__"
-
-        # Configure logging, accept logger instance or create a default one
-        self.logger = logging.getLogger(__name__)
-        self.logger.setLevel(logging.DEBUG)  # Set the desired log level
-
-        # Create a handler (e.g., file handler)
-        fh = logging.FileHandler('engine_log.txt')
-        fh.setLevel(logging.DEBUG)
-
-        # Create a formatter and set it on the handler
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        fh.setFormatter(formatter)
-
-        # Add the handler to the logger
-        self.logger.addHandler(fh)
+    def __init__(self, states=None, transitions=None, current_state=None, state_functions=None):
+        # Initialize states and transitions (handling None values)
+        self.states = states if states is not None else []
+        self.transitions = transitions if transitions is not None else {}
+        self.current_state = current_state
+        self.state_functions = state_functions if state_functions is not None else {}
+        self.logger = None  # Initialize logger to None
 
     def set_logger(self, logger):
-        """Sets a new logger for the engine."""
+        """Sets the logger for the engine."""
         self.logger = logger
 
     def _run_state(self, state_name):
-        """Runs the state function associated with the given state name."""
-        self.logger.debug(f"Running state: {state_name}")
+        """Runs the method associated with the given state."""
+        if self.logger:
+            self.logger.debug(f"Running state: {state_name}")
 
-        state_method = getattr(self.state_functions, state_name, None)
+        if state_name not in self.state_functions:
+            if self.logger:
+                self.logger.error(f"No function found for state: {state_name}")
+            return None, None  # No function associated with the state
 
-        if state_method:
-            try:
-                next_state_info = state_method()
-
-                if isinstance(next_state_info, tuple):
-                    condition, state_override = next_state_info
-                    return condition, state_override
-                else:
-                    return None, None
-
-            except Exception as e:
-                self.logger.exception(f"Exception in state {state_name}")
-                raise  # Re-raise the exception to halt execution
-
-        else:
-            self.logger.warning(f"No state method found for {state_name}")
+        func = self.state_functions[state_name]
+        try:
+            result, next_state = func()
+            return result, next_state
+        except Exception as e:
+            if self.logger:
+                self.logger.error(f"Error in state function {state_name}: {e}")
             return None, None
+
     def start(self):
-        """Runs the workflow as a generator."""
-        self.logger.info("Workflow started.")
-        
-        # Verify start state exists in graph
-        if "__start__" not in [node.get('name') for node in self.graph.get('nodes')]:
-            self.logger.error("__start__ state not found in graph")
-            raise ValueError("__start__ state not found in graph")
-            
-        while True:
-            self.logger.debug(f"Current state: {self.current_state}")
-            
-            # First yield the current state before processing
-            condition, state_override = self._run_state(self.current_state)
-            yield self.current_state, condition, state_override
-            
-            if self.current_state == "__end__":
-                self.logger.info("Workflow finished.")
-                break
-            
-            if self.current_state not in [node.get('name') for node in self.graph.get('nodes')]:
-                self.logger.error("Current state %s not found in graph", self.current_state)
-                self.current_state = '__end__'
-                continue
-                
+        """Starts the engine from the initial state."""
+        if self.logger:
+            self.logger.debug("Starting engine")
 
-            if state_override:
-                self.logger.debug(f"State override: {state_override}")
-                self.current_state = state_override
-                continue
+        if not self.states:
+            if self.logger:
+                self.logger.warning("No states defined.")
+            return
 
-            if condition is not None:
-                found_transition = False
-                for edge in self.graph.get('edges'):
-                    edge_source = edge.get('source')
-                    if edge_source == self.current_state:
-                        label = edge.get('attributes', {}).get('label') if edge.get('attributes') else None
-                        short_label = label.split(" ")[0] if label else None # Extract the short code
-                        if short_label and self.evaluate_condition(short_label, condition):
-                            self.logger.debug("Transitioning to %s based on condition %s", edge.get('destination'), condition)
-                            self.current_state = edge.get('destination')
-                            found_transition = True
-                            break
-                if not found_transition:
-                    self.logger.warning(f"No transition found for condition {condition}")
-                    self.current_state = '__end__'
-            else:
-                # Count possible transitions from current state
-                possible_edges = [edge for edge in self.graph.get('edges') if edge.get('source') == self.current_state]
-    
-                if len(possible_edges) > 1:
-                    self.logger.error(f"Multiple transitions found from state {self.current_state} but no condition provided")
-                    self.current_state = '__end__'
-                elif len(possible_edges) == 1:
-                    edge = possible_edges[0]
-                    label = edge.get('attributes', {}).get('label') if edge.get('attributes') else None
-                    self.logger.debug("Transitioning to %s with condition: %s", edge.get('destination'), condition)
-                    self.current_state = edge.get('destination')
-                else:
-                    self.logger.warning("No transition found without condition, ending workflow.")
-                    self.current_state = '__end__'
+        # Find and set the initial state
+        initial_state = self._find_initial_state()
+        if initial_state:
+            self.current_state = initial_state
+            if self.logger:
+                self.logger.debug(f"Initial state: {self.current_state}")
+            self._run_state(self.current_state)  # Run the initial state
+        else:
+            if self.logger:
+                self.logger.error("No valid initial state found.")
 
+    def _find_initial_state(self):
+        """Determines the initial state of the workflow."""
+        # Check if '__start__' is defined
+        if "__start__" in self.states:
+            return "__start__"
+
+        # Look for states with no incoming transitions
+        incoming_states = set()
+        for destinations in self.transitions.values():
+            incoming_states.update(destinations)
+        initial_states = [state for state in self.states if state not in incoming_states]
+
+        if not initial_states:
+            return None  # No initial state found
+        elif len(initial_states) > 1:
+            if self.logger:
+                self.logger.warning("Multiple potential initial states found. Using the first one.")
+            return initial_states[0]  # Return the first potential initial state
+        else:
+            return initial_states[0]  # Single initial state
 
     def evaluate_condition(self, label, condition):
         """
-        Evaluates if the given label matches the condition.
-        Returns True if the label exactly matches the condition string.
+        Evaluates a condition based on its label.
+        Conditions are boolean expressions defined as strings.
         """
-        if label is None or condition is None:
-            self.logger.debug("Label or condition is None")
-            return False
-        if not label or not condition:
-            self.logger.debug("Empty label or condition")
-            return False
-        result = str(label).strip() == str(condition).strip()
-        self.logger.debug("Condition evaluation: %s == %s -> %s", label, condition, result)
-        return result
+        if self.logger:
+            self.logger.debug(f"Evaluating condition: {label} ({condition})")
+
+        if not condition:
+            return True  # If no condition is defined, consider it True
+
+        try:
+            # Basic boolean conditions
+            result = eval(condition, {"label": label})
+            return result
+        except Exception as e:
+            if self.logger:
+                self.logger.error(f"Error evaluating condition '{condition}': {e}")
+            return False  # Consider condition as False on error
 
     @staticmethod
     def from_dot_string(dot_string, state_functions):
@@ -142,29 +106,57 @@ class WFEngine:
         if not parser.nodes or not parser.edges:
             raise ValueError("No graph could be created from DOT string. Check for parsing errors.")
 
-        # Create a simplified graph representation for the engine.  The
-        #   engine doesn't need a full pydot graph object.
-        graph = {
-            'nodes': parser.nodes,
-            'edges': parser.edges
-        }
-        return WFEngine(graph, state_functions)
+        nodes = [node['name'].strip() for node in parser.nodes]
+        edges = []
+        for edge in parser.edges:
+            source = edge['source'].strip()
+            destination = edge['destination'].strip()
+            label = edge.get('attributes', {}).get('label', '')  # Default to empty string if no label
+            edges.append((source, destination, label))
+
+        return WFEngine.from_nodes_and_edges(nodes, edges, state_functions)
 
     @staticmethod
     def from_nodes_and_edges(nodes, edges, state_functions):
         """Creates an WFEngine from lists of nodes and edges."""
+        # For now, raise a NotImplementedError.  This method is not yet used.
         raise NotImplementedError("Use from_dot_string instead")
+        states = nodes
+        transitions = {}
+        for source, destination, label in edges:
+            if source not in transitions:
+                transitions[source] = []
+            transitions[source].append((destination, label))
 
+        return WFEngine(states, transitions, None, state_functions)
 
     def render_graph(self, output_file="workflow", format_type="png"):
         """
-        Renders the graph to a file.
+        Renders the workflow graph to a file using Graphviz.
 
-        Args:
-            output_file (str): Base name for the output file (without extension)
-            format_type (str): Output format (e.g., 'png', 'pdf', 'svg')
+        :param output_file: The name of the output file (without extension).
+        :param format_type: The desired output format (e.g., "png", "pdf", "svg").
         """
-        # self.graph.write(f"{output_file}.{format_type}", format=format_type)
-        # Not implemented, we are not using pydot
-        raise NotImplementedError("render_graph is not implemented")
+        try:
+            from graphviz import Digraph
+
+            dot = Digraph(comment='Workflow')
+
+            # Add nodes
+            for state in self.states:
+                dot.node(state)
+
+            # Add edges with labels
+            for source, destinations in self.transitions.items():
+                for destination, label in destinations:
+                    dot.edge(source, destination, label=label)
+
+            # Render to file
+            dot.render(output_file, format=format_type, cleanup=True)
+            print(f"Workflow graph rendered to {output_file}.{format_type}")
+
+        except ImportError:
+            print("Graphviz is not installed. Please install it to render the graph.")
+        except Exception as e:
+            print(f"An error occurred while rendering the graph: {e}")
 
