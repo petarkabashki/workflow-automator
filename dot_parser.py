@@ -17,17 +17,13 @@ class DotParser:
             line = line.strip()
             if not line:
                 continue
-            
+
             if line.startswith('node'):
                 self._parse_node(line)
-                self.in_node = True
             elif line.startswith('edge'):
                 self._parse_edge(line)
-                self.in_node = False
-                self.in_edge = True
             elif '->' in line:
                 self._parse_edge_connection(line)
-                self.in_edge = False
     
     def _parse_node(self, line):
         """Parses a node definition line."""
@@ -56,10 +52,11 @@ class DotParser:
     
     def _parse_edge(self, line):
         """Parses an edge definition line."""
+        # First, check for default edge attributes
         edge_match = re.match(r'\s*edge\s*\{(.*)\}', line)
         if edge_match:
             attributes_str = edge_match.group(1).strip()
-            attributes = {}
+            default_attributes = {}
             if attributes_str:
                 # Split attributes by semicolon and parse each
                 for attr in attributes_str.split(';'):
@@ -67,17 +64,22 @@ class DotParser:
                     if attr:
                         if '=' in attr:
                             key, value = attr.split('=', 1)
-                            attributes[key.strip()] = value.strip().strip('"')
+                            default_attributes[key.strip()] = value.strip().strip('"')
                         else:
-                            attributes[attr.strip()] = True  # Handle boolean attributes
-            # The 'edge' block defines default attributes, not a specific edge
+                            default_attributes[attr.strip()] = True  # Handle boolean attributes
+            # Store default attributes for later use
+            self.default_edge_attributes = default_attributes
             return  # Skip adding this as a separate edge
 
+        # Then, check for an edge definition with source and destination nodes
         edge_match = re.match(r'\s*"([^"]+)"\s*->\s*"([^"]+)"\s*;', line)
         if edge_match:
             source_node = edge_match.group(1)
             dest_node = edge_match.group(2)
-            self.edges.append({'source': source_node, 'destination': dest_node, 'attributes': {}})
+            edge = {'source': source_node, 'destination': dest_node, 'attributes': {}}
+            if hasattr(self, 'default_edge_attributes'):
+                edge['attributes'].update(self.default_edge_attributes)
+            self.edges.append(edge)
     
     def _parse_edge_connection(self, line):
         """Parse an edge connection line."""
