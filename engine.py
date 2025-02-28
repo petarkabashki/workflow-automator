@@ -13,7 +13,7 @@ class WFEngine:
         self.state_functions = state_functions
         self.current_state = "__start__"
 
-        # Configure logging
+        # Configure logging, accept logger instance or create a default one
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.DEBUG)  # Set the desired log level
 
@@ -27,6 +27,10 @@ class WFEngine:
 
         # Add the handler to the logger
         self.logger.addHandler(fh)
+
+    def set_logger(self, logger):
+        """Sets a new logger for the engine."""
+        self.logger = logger
 
     def _run_state(self, state_name):
         """Runs the state function associated with the given state name."""
