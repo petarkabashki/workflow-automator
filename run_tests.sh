@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# Allow arguments for individual tests to be passed and used. AI!
+
 eval "$(conda shell.bash hook)"
 conda activate py311
 
