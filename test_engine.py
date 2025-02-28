@@ -48,7 +48,7 @@ def test_conditional_transition():
     setattr(state_functions, 'start', lambda: ("OK", None))
     engine = WFEngine.from_dot_string(dot_string, state_functions)
     engine.run()
-    assert engine.current_state == "end"
+    assert engine.current_state == "__end__"
 
 def test_strip_quotes():
     assert strip_quotes('"hello"') == "hello"
