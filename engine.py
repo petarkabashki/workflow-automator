@@ -61,14 +61,14 @@ class WFEngine:
         self.logger.info("Workflow started.")
         while True:
             if self.current_state == "__end__":
-                self.logger.info("Workflow finished.")
+                self.logger.info("Workflow finished. Current state: %s", self.current_state)
                 yield self.current_state, None, None
                 break
 
             self.logger.debug(f"Current state: {self.current_state}")
             
             if self.current_state not in [strip_quotes(node.get_name()) for node in self.graph.get_nodes()]:
-                self.logger.error(f"Current state {self.current_state} not found in graph")
+                self.logger.error("Current state %s not found in graph", self.current_state)
                 self.current_state = '__end__'
                 continue
                 
@@ -89,7 +89,7 @@ class WFEngine:
                         label = strip_quotes(edge.get_label())
                         short_label = label.split(" ")[0]  # Extract the short code
                         if short_label and self.evaluate_condition(short_label, condition):
-                            self.logger.debug(f"Transitioning to {edge.get_destination()} based on condition {condition}")
+                            self.logger.debug("Transitioning to %s based on condition %s", edge.get_destination(), condition)
                             self.current_state = strip_quotes(edge.get_destination())
                             found_transition = True
                             break
@@ -106,7 +106,7 @@ class WFEngine:
                 elif len(possible_edges) == 1:
                     edge = possible_edges[0]
                     label = strip_quotes(edge.get_label()) # get the label
-                    self.logger.debug(f"Transitioning to {edge.get_destination()} with condition: {condition}")
+                    self.logger.debug("Transitioning to %s with condition: %s", edge.get_destination(), condition)
                     self.current_state = strip_quotes(edge.get_destination())
                 else:
                     self.logger.warning("No transition found without condition, ending workflow.")
