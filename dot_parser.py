@@ -41,7 +41,7 @@ class DotParser:
                     # If the statement does not end with a semicolon, then stop parsing.
                     if not statement_text.rstrip().endswith(';'):
                         dot_string = ""
-                    break
+                    break # Continue to the next iteration of the while loop
             if not processed or len(dot_string) == initial_length:
                 break
 
@@ -99,7 +99,7 @@ class DotParser:
             return (False, 0, "")
         pattern_with_attrs = (
             r'^(?P<name>("([^"]+)"|[\w]+))\s*'
-            r'(?:\{|\[)\s*(?P<attrs>.*?)\s*(?:\}|\])\s*;?'
+            r'(?:(?:\{|\[)\s*(?P<attrs>.*?)\s*(?:\}|\]))?\s*;?'
         )
         m = re.match(pattern_with_attrs, text, flags=re.DOTALL)
         if m:
@@ -112,7 +112,7 @@ class DotParser:
             # If default node attributes are in effect, do not add new nodes.
             if self.default_node_attributes is not None:
                 return (True, m.end(), statement_text)
-            attributes = self._parse_attributes(m.group('attrs').strip())
+            attributes = self._parse_attributes(m.group('attrs').strip()) if m.group('attrs') else {}
             node = {'name': node_name}
             node['label'] = attributes.get('label', node_name)
             if attributes:
@@ -176,9 +176,9 @@ class DotParser:
             attrs = self._parse_attributes(m.group('attrs').strip())
             edge_attrs = self.default_edge_attributes.copy() if self.default_edge_attributes else {}
             edge_attrs.update(attrs)
-            # Only auto-add the source (if missing); do not auto-add a destination.
-            self._ensure_node_exists(source, is_source=True)
-            self._ensure_node_exists(destination, is_source=False)
+            # Ensure both source and destination nodes exist
+            self._ensure_node_exists(source, is_source=True)  # Always add source if not present
+            self._ensure_node_exists(destination, is_source=False) # Add destination, respecting default node rules
             edge = {'source': source, 'destination': destination, 'connector': connector}
             if edge_attrs:
                 edge['attributes'] = edge_attrs
@@ -202,8 +202,9 @@ class DotParser:
             if not self._is_valid_identifier(source) or not self._is_valid_identifier(destination):
                 return (True, m.end(), statement_text)
             connector = m.group('connector')
-            self._ensure_node_exists(source, is_source=True)
-            self._ensure_node_exists(destination, is_source=False)
+            self._ensure_node_exists(source, is_source=True)  # Always add source if not present
+            self._ensure_node_exists(destination, is_source=False) # Add destination, respecting default node rules
+
             edge = {'source': source, 'destination': destination, 'connector': connector}
             if self.default_edge_attributes:
                 edge['attributes'] = self.default_edge_attributes.copy()
@@ -231,8 +232,8 @@ class DotParser:
 
     def _ensure_node_exists(self, name, is_source=False):
         # If a default node block was defined, do not add additional nodes.
-        if self.default_node_attributes is not None:
+        if self.default_node_attributes is not None and not is_source:
             return
         # Only auto-add a node when it appears as a source.
-        if is_source and not any(n.get('name') == name for n in self.nodes):
+        if not any(n.get('name') == name for n in self.nodes):
             self.nodes.append({'name': name, 'label': name})
