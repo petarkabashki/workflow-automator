@@ -117,6 +117,9 @@ class WFEngine:
         Evaluates if the given label matches the condition.
         Returns True if the label exactly matches the condition string.
         """
+        if label is None or condition is None:
+            self.logger.debug("Label or condition is None")
+            return False
         if not label or not condition:
             self.logger.debug("Empty label or condition")
             return False
@@ -147,6 +150,12 @@ class WFEngine:
                 graph.add_edge(pydot.Edge(edge['src'], edge['dst'], label=edge['label']))
         return WFEngine(graph, state_functions)
 
-    def render_graph(self, filename="workflow", fmt="png"):
-        """Renders the graph to a file."""
-        self.graph.write(f"{filename}.{fmt}", format=fmt)
+    def render_graph(self, output_file="workflow", format_type="png"):
+        """
+        Renders the graph to a file.
+        
+        Args:
+            output_file (str): Base name for the output file (without extension)
+            format_type (str): Output format (e.g., 'png', 'pdf', 'svg')
+        """
+        self.graph.write(f"{output_file}.{format_type}", format=format_type)
