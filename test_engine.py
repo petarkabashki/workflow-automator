@@ -210,15 +210,12 @@ def test_run_method(monkeypatch):
         assert state == states[i]
         i += 1
 
-    #assert engine.current_state == "__end__"
-```
-
-test_engine.py
-```python
-<<<<<<< SEARCH
 import logging
 import io
 
+import os
+
+# AI: Pass a custom logger that logs into an individual log file in the 'test_logs' folder for every test. Use these logs to inspect the engine's behavior.
 def create_test_engine(logger=None):
     dot_string = """
     strict digraph {
