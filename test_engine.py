@@ -136,7 +136,8 @@ def test_engine_creation_from_nodes_and_edges():
     assert isinstance(engine.graph, pydot.Dot)
 
 def test_state_execution():
-    engine = create_test_engine()
+    logger = logging.getLogger('test_state_execution')
+    engine = create_test_engine(logger=logger)
     engine._run_state('start')
     assert engine.current_state == "__start__"  # Initial state
 
