@@ -112,8 +112,12 @@ class WFEngine:
     @staticmethod
     def from_dot_string(dot_string, state_functions):
         """Creates an WFEngine from a DOT string."""
-        (graph,) = pydot.graph_from_dot_data(dot_string)
-        return WFEngine(graph, state_functions)
+        try:
+            (graph,) = pydot.graph_from_dot_data(dot_string)
+            return WFEngine(graph, state_functions)
+        except Exception as e:
+            print(f"Error parsing DOT string: {e}")
+            return None
 
     @staticmethod
     def from_nodes_and_edges(nodes, edges, state_functions):
