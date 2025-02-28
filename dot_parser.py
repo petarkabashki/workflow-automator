@@ -27,14 +27,14 @@ class DotParser:
     
     def _parse_node(self, line):
         """Parses a node definition line."""
-        node_match = re.match(r'\s*(node\s*)?"([^"]+)"\s*\{(.*)\}', line)
+        node_match = re.match(r'\s*(node\s*)?"?([^"]*)"?\s*\{(.*)\}', line)
         if node_match:
-            node_name = node_match.group(2)
+            node_name = node_match.group(2).strip()
             attributes_str = node_match.group(3).strip()
             attributes = {}
             if attributes_str:
                 # Split attributes by semicolon and parse each
-                for attr in attributes_str.split(';'):
+                for attr in re.split(r';\s*', attributes_str):
                     attr = attr.strip()
                     if attr:
                         if '=' in attr:
@@ -43,11 +43,12 @@ class DotParser:
                         else:
                             attributes[attr.strip()] = True  # Handle boolean attributes
 
-            self.nodes.append({'name': node_name, 'label': attributes.get('label', node_name), 'attributes': attributes})
+            label = attributes.get('label', node_name)
+            self.nodes.append({'name': node_name, 'label': label, 'attributes': attributes})
         else:
-            node_match = re.match(r'\s*(node\s*)?"([^"]+)"\s*;', line)
+            node_match = re.match(r'\s*(node\s*)?"?([^"]*)"?\s*;', line)
             if node_match:
-                node_name = node_match.group(2)
+                node_name = node_match.group(2).strip()
                 self.nodes.append({'name': node_name, 'label': node_name, 'attributes': {}})
     
     def _parse_edge(self, line):
