@@ -1,36 +1,31 @@
 Event: state_change, Data: {'from': '__start__', 'to': None}
 Event: state_function_call, Data: {'state': '__start__'}
 Event: condition_received, Data: {'state': '__start__', 'condition': (None, None)}
-Event: transition, Data: {'from': '__start__', 'to': 'request_input', 'condition': None}
+Event: transition, Data: {'from': '__start__', 'to': 'request_input', 'condition': None, 'label': None}
 Event: state_change, Data: {'from': None, 'to': 'request_input'}
 Event: state_change, Data: {'from': 'request_input', 'to': None}
 Event: state_function_call, Data: {'state': 'request_input'}
 Event: condition_received, Data: {'state': 'request_input', 'condition': ('NOK', None)}
-Event: transition, Data: {'from': 'request_input', 'to': 'request_input', 'condition': 'NOK'}
-Event: state_change, Data: {'from': None, 'to': 'request_input'}
-Event: state_change, Data: {'from': 'request_input', 'to': None}
-Event: state_function_call, Data: {'state': 'request_input'}
-Event: condition_received, Data: {'state': 'request_input', 'condition': ('NOK', None)}
-Event: transition, Data: {'from': 'request_input', 'to': 'request_input', 'condition': 'NOK'}
-Event: state_change, Data: {'from': None, 'to': 'request_input'}
-Event: state_change, Data: {'from': 'request_input', 'to': None}
-Event: state_function_call, Data: {'state': 'request_input'}
-Event: condition_received, Data: {'state': 'request_input', 'condition': ('NOK', None)}
-Event: transition, Data: {'from': 'request_input', 'to': 'request_input', 'condition': 'NOK'}
+Event: transition, Data: {'from': 'request_input', 'to': 'request_input', 'condition': 'NOK', 'label': 'NOK (Missing name or email)'}
 Event: state_change, Data: {'from': None, 'to': 'request_input'}
 Event: state_change, Data: {'from': 'request_input', 'to': None}
 Event: state_function_call, Data: {'state': 'request_input'}
 Event: condition_received, Data: {'state': 'request_input', 'condition': ('OK', None)}
-Event: transition, Data: {'from': 'request_input', 'to': 'extract_n_check', 'condition': 'OK'}
+Event: transition, Data: {'from': 'request_input', 'to': 'extract_n_check', 'condition': 'OK', 'label': 'OK (Name and email provided)'}
 Event: state_change, Data: {'from': None, 'to': 'extract_n_check'}
 Event: state_change, Data: {'from': 'extract_n_check', 'to': None}
 Event: state_function_call, Data: {'state': 'extract_n_check'}
 Event: condition_received, Data: {'state': 'extract_n_check', 'condition': ('OK', None)}
-Event: transition, Data: {'from': 'extract_n_check', 'to': 'ask_confirmation', 'condition': 'OK'}
+Event: transition, Data: {'from': 'extract_n_check', 'to': 'ask_confirmation', 'condition': 'OK', 'label': 'OK (Data extracted)'}
 Event: state_change, Data: {'from': None, 'to': 'ask_confirmation'}
 Event: state_change, Data: {'from': 'ask_confirmation', 'to': None}
 Event: state_function_call, Data: {'state': 'ask_confirmation'}
-Event: condition_received, Data: {'state': 'ask_confirmation', 'condition': ('invalid_confirmation', 'ask_confirmation')}
-Event: state_override, Data: {'from': 'ask_confirmation', 'to': 'ask_confirmation'}
-Event: state_change, Data: {'from': None, 'to': 'ask_confirmation'}
+Event: condition_received, Data: {'state': 'ask_confirmation', 'condition': ('Y', None)}
+Event: transition, Data: {'from': 'ask_confirmation', 'to': 'process_data', 'condition': 'Y', 'label': 'Y (Confirmed)'}
+Event: state_change, Data: {'from': None, 'to': 'process_data'}
+Event: state_change, Data: {'from': 'process_data', 'to': None}
+Event: state_function_call, Data: {'state': 'process_data'}
+Event: condition_received, Data: {'state': 'process_data', 'condition': (None, None)}
+Event: transition, Data: {'from': 'process_data', 'to': '__end__', 'condition': None, 'label': None}
+Event: state_change, Data: {'from': None, 'to': '__end__'}
 Event: workflow_finished, Data: {}

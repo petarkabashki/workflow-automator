@@ -64,9 +64,9 @@ class MockStateFunctions:
         return None, None  # No condition, no override
 
     def state1(self):
-        if self.context.get("override_state_from_state1"):
-            return (None, "override_state_target")
-        return None, None # Default
+        # if self.context.get("override_state_from_state1"):
+        return (None, "override_state_target")
+        # return None, None # Default
 
 # --- End Custom Mock State Functions ---
 
