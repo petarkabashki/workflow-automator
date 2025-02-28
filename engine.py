@@ -64,9 +64,10 @@ class WFEngine:
             # Always yield current state before processing
             yield self.current_state, None, None
             
+            self.logger.debug(f"Current state: {self.current_state}")
+            
             if self.current_state == "__end__":
                 self.logger.info("Workflow finished.")
-                yield self.current_state, None, None
                 break
 
             self.logger.debug(f"Current state: {self.current_state}")
