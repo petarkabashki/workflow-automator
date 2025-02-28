@@ -1,3 +1,5 @@
+from dot_parser import DotParser
+
 class WFEngine:
     """
     The WFEngine class manages state transitions and state method invocations.
