@@ -1,32 +1,31 @@
-# DOT File Driven State Machine in Python
+# Asynchronous DOT File Driven State Machine in Python
 
-[![License](about:sanitized)](https://www.google.com/url?sa=E&source=gmail&q=https://opensource.org/licenses/MIT)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 ## Description
 
-This Python project implements a flexible state machine engine that is driven by DOT graph files. It allows you to define state machines visually using the DOT language and then execute them in Python by associating states with Python functions.
+This Python project implements a flexible, **asynchronous** state machine engine driven by DOT graph files. It allows you to define state machines visually using the DOT language and then execute them in Python by associating states with **asynchronous** Python methods within a class.
 
-The core idea is to decouple the state machine's structure (defined in the DOT file) from its behavior (implemented in Python functions). This makes it easy to:
+The core idea is to decouple the state machine's structure (defined in the DOT file) from its behavior (implemented in Python methods). This makes it easy to:
 
-  * **Visually design and understand state machine workflows.**
-  * **Modify the state machine's structure without changing Python code.**
-  * **Reuse the state machine engine for different tasks by simply changing the DOT file and state functions.**
+*   **Visually design and understand state machine workflows.**
+*   **Modify the state machine's structure without changing Python code.**
+*   **Reuse the state machine engine for different tasks by simply changing the DOT file and state function class.**
 
-This project is ideal for applications that involve complex workflows, decision-making processes, or sequential operations where the flow needs to be easily configurable and maintainable.
+This project is ideal for applications that involve complex workflows, decision-making processes, or sequential operations where the flow needs to be easily configurable and maintainable.  The asynchronous nature of the engine makes it suitable for I/O-bound operations within state functions.
 
 ## Features
 
-  * **DOT File Parsing:** Reads state machine definitions from DOT (`.dot`) files using the `graphviz` library.
-  * **State Function Execution:** Executes Python functions associated with each state in the DOT graph.
-  * **Context Management:** Passes a context dictionary to each state function, allowing for data sharing and stateful operations throughout the state machine execution.
-  * **Override Next State:** State functions can optionally override the next state defined in the DOT graph, providing dynamic control over state transitions based on function logic.
-  * **Initial State Configuration:** Flexible options to define the initial state:
-      * Explicitly set in the Python code.
-      * Derived from the graph name in the DOT file (using `state_machine_initial_state` convention).
-      * Defaults to the first node in the DOT file if no initial state is otherwise specified.
-  * **End State Handling:**  Supports a designated end state (`__end__` by default) to gracefully terminate the state machine.
-  * **Error Handling:** Includes robust error handling for common issues like DOT file parsing errors, missing state functions, and unexpected function return types.
-  * **Informative Output:** Provides clear console output, logging state transitions, context changes, and any warnings or errors encountered during execution.
+*   **DOT File Parsing:** Reads state machine definitions from DOT (`.dot`) files using the `pydot` library.
+*   **Asynchronous State Function Execution:** Executes **asynchronous** Python methods associated with each state in the DOT graph.
+*   **Class-Based State Functions:** Organizes state functions within a Python class for better structure and maintainability.
+*   **Context Management:**  A `context` dictionary within the state function class allows for data sharing and stateful operations throughout the state machine execution.
+*   **Interaction History:**  An `interaction_history` list within the state function class records system messages and user interactions.
+*   **Condition-Based Transitions:** Supports transitions based on conditions returned by state functions, matched against edge labels in the DOT graph.
+*   **State Override:** State functions can override the next state defined in the DOT graph, providing dynamic control over state transitions.
+*   **Observer Pattern:** The `WFEngine` uses the observer pattern to emit detailed notifications about state changes, function calls, conditions, overrides, transitions, and errors.  An observer (`EngineObserver`) is provided to log these events to the console and a file.
+*   **End State Handling:** Supports a designated end state (`__end__` by default) to gracefully terminate the state machine.
+*   **Error Handling:** Includes robust error handling.
 
 ## Getting Started
 
@@ -34,92 +33,105 @@ This project is ideal for applications that involve complex workflows, decision-
 
 Before you begin, ensure you have the following installed:
 
-  * **Python 3.x:**  You'll need a working Python 3 environment.
-
-  * **Graphviz Python library:** Install using pip:
+*   **Python 3.7+:** You'll need a working Python 3.7 or later environment (due to `asyncio` features).
+*   **Dependencies:** Install using pip:
 
     ```bash
-    pip install graphviz
+    pip install pydot nest_asyncio
     ```
+*   **Graphviz Executables:**  **Crucially, you also need to install the Graphviz *system executables*** on your operating system. This is separate from the Python library.
 
-  * **Graphviz Executables:**  **Crucially, you also need to install the Graphviz *system executables*** on your operating system. This is separate from the Python library.
-
-      * **macOS:**  Using Homebrew: `brew install graphviz`
-      * **Debian/Ubuntu:** `sudo apt-get install graphviz`
-      * **Windows:** Download from the [Graphviz website](https://www.google.com/url?sa=E&source=gmail&q=https://graphviz.org/download/) and ensure the `bin` directory is added to your system's `PATH` environment variable.
-      * **Other systems:** Refer to the [Graphviz installation guide](https://www.google.com/url?sa=E&source=gmail&q=https://graphviz.org/download/).
+    *   **macOS:** Using Homebrew: `brew install graphviz`
+    *   **Debian/Ubuntu:** `sudo apt-get install graphviz`
+    *   **Windows:** Download from the [Graphviz website](https://graphviz.org/download/) and ensure the `bin` directory is added to your system's `PATH` environment variable.
+    *   **Other systems:** Refer to the [Graphviz installation guide](https://graphviz.org/download/).
 
     **Without the Graphviz system executables installed and in your PATH, the DOT file parsing will fail.**
 
 ### Usage
 
-1.  **Create a DOT File:** Define your state machine visually using the DOT language and save it as a `.dot` file (e.g., `state_machine_graph.dot`).  Refer to the [Graphviz DOT language documentation](https://www.google.com/url?sa=E&source=gmail&q=https://graphviz.org/doc/info/lang.html) for details on DOT syntax.
+1.  **Create a DOT File:** Define your state machine visually using the DOT language and save it as a `.dot` file (e.g., `workflow.dot`). Refer to the [Graphviz DOT language documentation](https://graphviz.org/doc/info/lang.html) for details on DOT syntax.
 
-    **Example `state_machine_graph.dot`:**
+    **Example `workflow.dot`:**
 
     ```dot
-    digraph state_machine {
-        graph [name="state_machine_extract_data"] // Example to set initial state, remove for default
-        extract_data -> check_all_data_collected;
-        check_all_data_collected -> request_input [label="needs_input"];
-        check_all_data_collected -> ask_confirmation [label="data_collected"];
-        request_input -> extract_data;
-        ask_confirmation -> process_data [label="confirm"];
-        ask_confirmation -> extract_data [label="reject"];
-        process_data -> __end__ [label="process_done"];
+    strict digraph {
+        __start__ -> request_input;
+        request_input -> extract_n_check[label="OK"];
+        request_input -> request_input[label="NOK"];
+        extract_n_check -> request_input[label="NOK"];
+        extract_n_check -> ask_confirmation[label="OK"];
+        ask_confirmation -> process_data[label="Y"];
+        ask_confirmation -> request_input[label="N"];
+        ask_confirmation -> __end__[label="Q"];
+        process_data -> __end__;
     }
     ```
 
-      * **Nodes (States):**  Represent states in your machine (e.g., `extract_data`, `check_all_data_collected`).
-      * **Edges (Transitions):**  Define transitions between states (e.g., `extract_data -> check_all_data_collected;`). Labels on edges are optional and not currently used by the state machine engine itself, but can be helpful for documentation.
-      * **Graph Name (Optional):** You can set the graph name to influence the initial state using the `graph [name="state_machine_your_initial_state"]` syntax.
+    *   **Nodes (States):** Represent states in your machine (e.g., `request_input`, `extract_n_check`).
+    *   **Edges (Transitions):** Define transitions between states (e.g., `request_input -> extract_n_check`).  Labels on edges represent conditions.
+    *   **`__start__` and `__end__`:**  Use these special state names to indicate the starting and ending states.
 
-2.  **Define State Functions in Python:** Create Python functions for each state in your DOT file. These functions will implement the logic for each state.
+2.  **Define State Functions in a Class:** Create a Python class (`StateFunctions` is the recommended name) and define asynchronous methods for each state in your DOT file.
 
-    **Example State Functions (from `main.py`):**
+    **Example State Functions (from `state_functions.py`):**
 
     ```python
-    def extract_data_func(context):
-        print("Executing: extract_data_func")
-        context['extracted_data'] = "some data" # Simulate data extraction
-        context['question'] = None # Reset question
-        return context, None # No override, use DOT file for next state
+    import asyncio
 
-    def check_all_data_collected_func(context):
+    class StateFunctions:
+        def __init__(self):
+            self.context = {}  # Initialize context
+            self.interaction_history = []
+
+        async def request_input(self):
+            # ... (implementation) ...
+            return "OK", None  # (condition, override_next_state)
+
+        async def extract_n_check(self):
+            # ...
+            return "OK", None
+
         # ... (other state functions) ...
+
+        async def __start__(self):
+            self.interaction_history.append(("system", "Workflow started."))
+            return None, None
     ```
 
-      * **Function Signature:** Each state function should accept a `context` dictionary as its first argument.
-      * **Return Value:**  A state function should return either:
-          * **A dictionary:**  This is the updated context. The next state will be determined by the transitions defined in the DOT file from the current state.
-          * **A tuple:** `(updated_context, override_next_state)`.
-              * `updated_context`: The updated context dictionary.
-              * `override_next_state`: A string specifying the name of the state to transition to *next*, overriding the DOT file's transitions. Set to `None` to use DOT file transitions.
+    *   **`__init__`:** Initialize the `context` and `interaction_history`.
+    *   **Method Signature:** Each state function should be `async` and have a name matching a state in your DOT file.  They don't *need* to accept any arguments, as they can access `self.context` and `self.interaction_history` directly.
+    *   **Return Value:** A state function should return a tuple: `(condition, override_next_state)`.
+        *   `condition`: A string matching an edge label in the DOT file, or `None`.
+        *   `override_next_state`: A string specifying the next state (overriding DOT file transitions), or `None`.
 
 3.  **Create the Main Python Script (e.g., `main.py`):**
 
     ```python
-    from state_machine import StateMachine # Assuming you saved the code as state_machine.py
+    import asyncio
+    from engine import WFEngine
+    from state_functions import StateFunctions
+    from engine_observer import EngineObserver
+    import nest_asyncio
 
-    # 1. Define state functions mapping
-    state_functions_map = {
-        "extract_data": extract_data_func,
-        "check_all_data_collected": check_all_data_collected_func,
-        # ... (map all your state functions) ...
-        "__end__": lambda context: context # End state function (can be a simple lambda)
-    }
+    nest_asyncio.apply()  # Required for nested event loops
 
-    # 2. Path to your DOT file
-    dot_file = 'state_machine_graph.dot'
+    async def main():
+        with open("workflow.dot", "r") as f:
+            dot_content = f.read()
 
-    # 3. Initialize and run the state machine
-    initial_context = {} # Start with an empty context, or populate with initial data
-    try:
-        sm = StateMachine(dot_file, state_functions_map) #, initial_state="extract_data") // Optional initial state
-        final_context = sm.run(initial_context)
-        print("\nFinal Context:", final_context)
-    except Exception as e:
-        print(f"State Machine Error: {e}")
+        state_functions = StateFunctions()
+        engine = WFEngine.from_dot_string(dot_content, state_functions)
+
+        observer = EngineObserver()
+        engine.subscribe(observer)
+
+        engine.render_graph()
+        await engine.run()
+        observer.save_log()
+
+    if __name__ == "__main__":
+        asyncio.run(main())
     ```
 
 4.  **Run the Script:** Execute your Python script:
@@ -130,59 +142,41 @@ Before you begin, ensure you have the following installed:
 
     The script will:
 
-      * Parse the `state_machine_graph.dot` file.
-      * Initialize the `StateMachine` with the DOT file and state functions.
-      * Run the state machine, starting from the initial state.
-      * Execute the Python function associated with each state as it transitions.
-      * Print output showing state transitions and the final context dictionary.
+    *   Parse the `workflow.dot` file.
+    *   Initialize the `WFEngine` and `StateFunctions`.
+    *   Create and subscribe an `EngineObserver`.
+    *   Run the state machine, starting from the `__start__` state.
+    *   Execute the asynchronous Python method associated with each state.
+    *   Log events to the console and `engine_log.txt`.
 
 ## DOT File Format Details
 
-  * **Directed Graphs (`digraph`):** The DOT file must define a directed graph using `digraph`.
-  * **State Names:** State names in the DOT file must exactly match the keys in your `state_functions_map` dictionary in Python.
-  * **Transitions:** Transitions between states are defined using `->`.
-  * **Initial State:**  Can be configured as described in "Usage" step 3 (optional `initial_state` parameter, graph name convention, or defaults to first node).
-  * **End State:** While the code uses `__end__` as a default end state, you can also define `__end__` (or your chosen `end_state`) as a node in your DOT file if you want to visually represent it.
+*   **Directed Graphs (`digraph`):**  Use `digraph` or `strict digraph`.
+*   **State Names:** State names in the DOT file *must* exactly match the method names in your `StateFunctions` class.
+*   **Transitions:** Transitions are defined using `->`.
+*   **Edge Labels:** Edge labels are used as conditions.  A state function's returned `condition` is compared to these labels.
+*   **`__start__` and `__end__`:** Required for starting and ending states.
 
-## State Function Requirements
+## Observer Pattern
 
-  * **Argument:** Each state function must accept a single argument: `context` (a dictionary).
-  * **Return Value:** Each state function must return either:
-      * A dictionary (updated `context`).
-      * A tuple: `(updated_context, override_next_state)`.
-  * **Function Logic:** Implement the specific logic for each state within its corresponding Python function. This might involve data processing, API calls, user interaction, or any other operations relevant to your state machine.
+The `WFEngine` emits events to subscribed observers.  The `EngineObserver` class (in `engine_observer.py`) provides console and file logging:
 
-## Error Handling
-
-The `StateMachine` class includes error handling for:
-
-  * **Graphviz Executables Not Found:** Checks if Graphviz system executables are in the system's PATH.
-  * **DOT File Parsing Errors:** Catches errors during DOT file parsing (syntax errors, invalid graph structure).
-  * **Empty State Function Dictionary:** Ensures that state functions are provided.
-  * **Undefined Initial State:** Handles cases where the initial state cannot be determined.
-  * **Missing State Functions:** Warns if a function is not defined for a state encountered during execution.
-  * **Unexpected Function Return Types:** Checks that state functions return the expected dictionary or tuple format.
-  * **Errors within State Functions:** Catches exceptions that occur during the execution of state functions and stops the state machine.
+*   **`notify(event_type, data)`:**  This method is called by the engine for each event.
+*   **Event Types:**
+    *   `state_change`:  Indicates a change in the current state.
+    *   `state_function_call`:  Before a state function is called.
+    *   `condition_received`: After a state function returns.
+    *   `state_override`: When a state override occurs.
+    *   `transition`:  When a transition is taken (based on condition or default).
+    *   `transition_error`: If a transition fails.
+    *   `error`: For errors within state functions or the engine.
+    *   `workflow_finished`: When the workflow completes.
 
 ## Example
 
-See the `if __name__ == '__main__':` block in the `state_machine.py` (or `main.py` example) for a complete working example, including example state functions and a DOT file configuration.  You can adapt this example to create your own state machines.
-
-## Further Development (Optional)
-
-  * **Edge Labels for Logic:** Enhance the engine to use edge labels in the DOT file to define conditions or logic for transitions (e.g., conditional transitions based on context data).
-  * **Visualization Tools:** Create tools to visually monitor the state machine's execution in real-time.
-  * **State History/Logging:** Implement more detailed logging of state transitions and context changes for debugging and auditing.
-  * **More Complex Context Handling:**  Explore options for more advanced context management, such as context inheritance or hierarchical contexts.
+The provided code (`engine.py`, `state_functions.py`, `engine_observer.py`, `main.py`, and `workflow.dot`) forms a complete, runnable example.
 
 ## License
 
-[MIT License](https://www.google.com/url?sa=E&source=gmail&q=LICENSE)
+[MIT License](https://opensource.org/licenses/MIT)
 
-## Author
-
-[Your Name/Organization] - [Your Contact Information (Optional)]
-
------
-
-This README provides a comprehensive guide to using the DOT File Driven State Machine project.  Remember to replace the bracketed placeholders (like `[Your Name/Organization]`, license badge link, etc.) with your actual information. Good luck building your state machines\!
