@@ -1,6 +1,6 @@
 """
 Test suite for the workflow engine.
-Logging is managed in the following way:
+Logging is managed as follows:
 1. Before any tests run, the test_logs directory is cleaned (deleted and recreated)
 2. Each test gets its own log file in test_logs/<test_name>.log
 3. Log files capture DEBUG level and above messages
@@ -104,7 +104,9 @@ def test_multiple_transitions_without_condition_logs():
     for state, condition, state_override in workflow:
         states.append(state)
         
-    # Check log contents and their order
+    # Collect all states and verify sequence
+    assert states == ['__start__', '__end__']
+    
     logs = get_log_contents('test_multiple_transitions_without_condition_logs')
     expected_logs = [
         'test_multiple_transitions_without_condition_logs - INFO - Workflow started.',
@@ -144,7 +146,9 @@ def test_conditional_transition_logs():
     for state, condition, state_override in workflow:
         states.append(state)
         
-    # Check log contents and their order
+    # Collect all states and verify sequence
+    assert states == ['__start__', 'a', '__end__']
+    
     logs = get_log_contents('test_conditional_transition_logs')
     expected_logs = [
         'test_conditional_transition_logs - INFO - Workflow started.',
@@ -189,8 +193,9 @@ def test_multiple_transitions_without_condition():
     for state, condition, state_override in workflow:
         states.append(state)
     
-    # Should only see __start__ and __end__ states
+    # Collect all states and verify sequence
     assert states == ['__start__', '__end__']
+    
     assert engine.current_state == '__end__'
 
 def create_test_engine(logger=None, dot_string=None):
