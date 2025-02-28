@@ -20,6 +20,8 @@ import os
 import shutil
 import re
 
+# Update the tests to take into account that the state functions can yield multiple times. AI!
+
 def get_log_contents(test_name):
     """
     Reads and returns the contents of a test's log file.
