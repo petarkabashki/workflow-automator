@@ -1,5 +1,5 @@
 def strip_quotes(text):
-    if not text: # Empty string
+    if not text: # Empty string or None
         return text
 
     first_char = text[0]
