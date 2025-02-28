@@ -34,16 +34,16 @@ class DotParser:
             elif '->' in line or '--' in line:
                 self._parse_edge_connection(line)
             else:
-                self._parse_standalone_node(line)
+                self._parse_standalone_node(line)  # Handle nodes w/o "node"
 
     def _parse_node_definition(self, line):
         """Parses a node definition line (starting with 'node')."""
-        # Match default node attributes
+        # Match default node attributes ONLY
         match = re.match(r'node\s*\{(.*)\}', line)
         if match:
             attributes_str = match.group(1).strip()
             self.default_node_attributes = self._parse_attributes(attributes_str)
-            return
+            return  # Important: Only set defaults, don't create a node
 
         # Match node with name and attributes
         match = re.match(r'node\s+"([^"]+)"\s*\{([^}]*)\}', line)
@@ -52,7 +52,10 @@ class DotParser:
             attributes_str = match.group(2).strip()
             attributes = self._parse_attributes(attributes_str)
             label = attributes.get('label', node_name)
-            self.nodes.append({'name': node_name, 'label': label, 'attributes': attributes})
+            # Apply default attributes *before* adding inline attributes
+            node_attributes = self.default_node_attributes.copy()
+            node_attributes.update(attributes)
+            self.nodes.append({'name': node_name, 'label': label, 'attributes': node_attributes})
             return
 
         # Match node with just a name (no inline attributes)
@@ -73,7 +76,10 @@ class DotParser:
             attributes_str = match.group(2).strip()
             attributes = self._parse_attributes(attributes_str)
             label = attributes.get('label', node_name)
-            self.nodes.append({'name': node_name, 'label': label, 'attributes': attributes})
+            # Apply default attributes *before* adding inline attributes
+            node_attributes = self.default_node_attributes.copy()
+            node_attributes.update(attributes)
+            self.nodes.append({'name': node_name, 'label': label, 'attributes': node_attributes})
             return
 
         match = re.match(r'"([^"]+)"\s*;?', line)
@@ -103,12 +109,14 @@ class DotParser:
             destination = match.group(3).strip()
             attributes_str = match.group(4).strip()
             attributes = self._parse_attributes(attributes_str)
-            attributes = {**self.default_edge_attributes, **attributes}  # Merge
+            # Apply default attributes *before* adding inline attributes
+            edge_attributes = self.default_edge_attributes.copy()
+            edge_attributes.update(attributes)
             self.edges.append({
                 'source': source,
                 'destination': destination,
                 'connector': connector,
-                'attributes': attributes
+                'attributes': edge_attributes
             })
             return
 
@@ -139,6 +147,5 @@ class DotParser:
                         key, value = attr.split('=', 1)
                         attributes[key.strip()] = value.strip().strip('"')
                     else:
-                        # Handle boolean attributes (e.g., "dashed")
                         attributes[attr.strip()] = True
         return attributes
