@@ -8,11 +8,11 @@ class DotParser:
         self.edges = []
         self.in_node = False
         self.in_edge = False
-        
+
     def parse(self, dot_string):
         """Parse a DOT language string and create a graph."""
         lines = dot_string.split('\n')
-        
+
         for line in lines:
             line = line.strip()
             if not line:
@@ -24,7 +24,7 @@ class DotParser:
                 self._parse_edge(line)
             elif '->' in line:
                 self._parse_edge_connection(line)
-    
+
     def _parse_node(self, line):
         """Parses a node definition line."""
         node_match = re.match(r'\s*(node\s*)?"?([^"]*)"?\s*\{(.*)\}', line)
@@ -50,7 +50,6 @@ class DotParser:
             if node_match:
                 node_name = node_match.group(2).strip()
                 self.nodes.append({'name': node_name, 'label': node_name, 'attributes': {}})
-    
     def _parse_edge(self, line):
         """Parses an edge definition line."""
         # First, check for default edge attributes
@@ -77,25 +76,27 @@ class DotParser:
         if edge_match:
             source_node = edge_match.group(1)
             dest_node = edge_match.group(2)
-            edge = {'source': source_node, 'destination': dest_node, 'attributes': {}}
+            edge = {'source': source_node, 'destination': dest_node}
             if hasattr(self, 'default_edge_attributes'):
-                edge['attributes'].update(self.default_edge_attributes)
+                edge['attributes'] = self.default_edge_attributes
+            else:
+                edge['attributes'] = {}
             self.edges.append(edge)
-    
+
     def _parse_edge_connection(self, line):
         """Parse an edge connection line."""
         if '->' in line:
             source, dest = line.split('->', 1)
             source = source.strip().strip('"')
             dest = dest.strip().strip('"')
-            
+
             edge = {
                 'source': source,
                 'destination': dest,
                 'attributes': {}
             }
             self.edges.append(edge)
-    
+
     def _parse_label(self, line):
         """Parses a label attribute."""
         label_match = re.match(r'\s*label\s*=\s*"([^"]+)"\s*;', line)
