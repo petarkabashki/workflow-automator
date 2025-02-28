@@ -31,6 +31,7 @@ def test_parse_malformed_string():
     assert len(parser.nodes) == 0
     assert len(parser.edges) == 0
 
+# 
 def test_parse_simple_graph_with_nodes_and_edges(simple_dot_string):
     """Test parsing of a simple graph with nodes and edges."""
     parser = DotParser()
