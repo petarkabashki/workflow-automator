@@ -60,6 +60,11 @@ class WFEngine:
         """Runs the workflow as a generator."""
         self.logger.info("Workflow started.")
         
+        # Verify start state exists in graph
+        if "__start__" not in [strip_quotes(node.get_name()) for node in self.graph.get_nodes()]:
+            self.logger.error("__start__ state not found in graph")
+            raise ValueError("__start__ state not found in graph")
+            
         while True:
             self.logger.debug(f"Current state: {self.current_state}")
             
@@ -133,11 +138,13 @@ class WFEngine:
     def from_dot_string(dot_string, state_functions):
         """Creates an WFEngine from a DOT string."""
         try:
-            (graph,) = pydot.graph_from_dot_data(dot_string)
-            return WFEngine(graph, state_functions)
+            graphs = pydot.graph_from_dot_data(dot_string)
+            if not graphs:
+                raise ValueError("No graph could be created from DOT string")
+            return WFEngine(graphs[0], state_functions)
         except Exception as e:
-            print(f"Error parsing DOT string: {e}")
-            return None
+            print(f"Error parsing DOT string: {e}", file=sys.stderr)
+            raise
 
     @staticmethod
     def from_nodes_and_edges(nodes, edges, state_functions):
