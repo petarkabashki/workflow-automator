@@ -55,16 +55,22 @@ class WFEngine:
         else:
             self.logger.warning(f"No state method found for {state_name}")
             return None, None
-
-    def run(self):
+    def start(self):
         """Runs the workflow as a generator."""
         self.logger.info("Workflow started.")
         while True:
-            if self.current_state == "__end__":
+            if self.current_state in ["__end__", "end"]:  # Handle both cases temporarily
                 self.logger.info("Workflow finished.")
+                yield self.current_state, None, None
                 break
 
             self.logger.debug(f"Current state: {self.current_state}")
+            
+            if self.current_state not in [strip_quotes(node.get_name()) for node in self.graph.get_nodes()]:
+                self.logger.error(f"Current state {self.current_state} not found in graph")
+                self.current_state = '__end__'
+                continue
+                
             condition, state_override = self._run_state(self.current_state)
 
             yield self.current_state, condition, state_override
@@ -77,30 +83,33 @@ class WFEngine:
             if condition is not None:
                 found_transition = False
                 for edge in self.graph.get_edges():
-                    if edge.get_source() == self.current_state:
+                    edge_source = strip_quotes(edge.get_source())
+                    if edge_source == self.current_state:
                         label = strip_quotes(edge.get_label())
                         short_label = label.split(" ")[0]  # Extract the short code
                         if short_label and self.evaluate_condition(short_label, condition):
                             self.logger.debug(f"Transitioning to {edge.get_destination()} based on condition {condition}")
-                            self.current_state = edge.get_destination()
+                            self.current_state = strip_quotes(edge.get_destination())
                             found_transition = True
                             break
                 if not found_transition:
                     self.logger.warning(f"No transition found for condition {condition}")
                     self.current_state = '__end__'
             else:
-                found_transition = False
-                for edge in self.graph.get_edges():
-                    if edge.get_source() == self.current_state:
-                        label = strip_quotes(edge.get_label()) # get the label
-                        self.logger.debug(f"Transitioning to {edge.get_destination()} without condition")
-                        self.current_state = edge.get_destination()
-                        found_transition = True
-                        break
-                if not found_transition:
-                    if self.current_state != '__end__':
-                        self.logger.warning("No transition found without condition, ending workflow.")
-                        self.current_state = '__end__'
+                # Count possible transitions from current state
+                possible_edges = [edge for edge in self.graph.get_edges() if strip_quotes(edge.get_source()) == self.current_state]
+    
+                if len(possible_edges) > 1:
+                    self.logger.error(f"Multiple transitions found from state {self.current_state} but no condition provided")
+                    self.current_state = '__end__'
+                elif len(possible_edges) == 1:
+                    edge = possible_edges[0]
+                    label = strip_quotes(edge.get_label()) # get the label
+                    self.logger.debug(f"Transitioning to {edge.get_destination()} with condition: {condition}")
+                    self.current_state = strip_quotes(edge.get_destination())
+                else:
+                    self.logger.warning("No transition found without condition, ending workflow.")
+                    self.current_state = '__end__'
 
 
     def evaluate_condition(self, label, condition):
