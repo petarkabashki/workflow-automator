@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash 
 
 # Allow arguments for individual tests to be passed and used.
 
