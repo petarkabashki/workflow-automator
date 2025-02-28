@@ -1,11 +1,9 @@
 import logging
-# replase this with the DotParser in this project AI!
-import pydot
 import sys
 from io import StringIO
 from utils import strip_quotes
+from dot_parser import DotParser
 
-# replace pydot with the DotParser. AI!
 class WFEngine:
     """
     The WFEngine class manages state transitions and state method invocations.
@@ -63,7 +61,7 @@ class WFEngine:
         self.logger.info("Workflow started.")
         
         # Verify start state exists in graph
-        if "__start__" not in [strip_quotes(node.get_name()) for node in self.graph.get_nodes()]:
+        if "__start__" not in [node.get('name') for node in self.graph.get('nodes')]:
             self.logger.error("__start__ state not found in graph")
             raise ValueError("__start__ state not found in graph")
             
@@ -78,7 +76,7 @@ class WFEngine:
                 self.logger.info("Workflow finished.")
                 break
             
-            if self.current_state not in [strip_quotes(node.get_name()) for node in self.graph.get_nodes()]:
+            if self.current_state not in [node.get('name') for node in self.graph.get('nodes')]:
                 self.logger.error("Current state %s not found in graph", self.current_state)
                 self.current_state = '__end__'
                 continue
@@ -91,14 +89,14 @@ class WFEngine:
 
             if condition is not None:
                 found_transition = False
-                for edge in self.graph.get_edges():
-                    edge_source = strip_quotes(edge.get_source())
+                for edge in self.graph.get('edges'):
+                    edge_source = edge.get('source')
                     if edge_source == self.current_state:
-                        label = strip_quotes(edge.get_label())
-                        short_label = label.split(" ")[0]  # Extract the short code
+                        label = edge.get('attributes', {}).get('label') if edge.get('attributes') else None
+                        short_label = label.split(" ")[0] if label else None # Extract the short code
                         if short_label and self.evaluate_condition(short_label, condition):
-                            self.logger.debug("Transitioning to %s based on condition %s", edge.get_destination(), condition)
-                            self.current_state = strip_quotes(edge.get_destination())
+                            self.logger.debug("Transitioning to %s based on condition %s", edge.get('destination'), condition)
+                            self.current_state = edge.get('destination')
                             found_transition = True
                             break
                 if not found_transition:
@@ -106,16 +104,16 @@ class WFEngine:
                     self.current_state = '__end__'
             else:
                 # Count possible transitions from current state
-                possible_edges = [edge for edge in self.graph.get_edges() if strip_quotes(edge.get_source()) == self.current_state]
+                possible_edges = [edge for edge in self.graph.get('edges') if edge.get('source') == self.current_state]
     
                 if len(possible_edges) > 1:
                     self.logger.error(f"Multiple transitions found from state {self.current_state} but no condition provided")
                     self.current_state = '__end__'
                 elif len(possible_edges) == 1:
                     edge = possible_edges[0]
-                    label = strip_quotes(edge.get_label()) # get the label
-                    self.logger.debug("Transitioning to %s with condition: %s", edge.get_destination(), condition)
-                    self.current_state = strip_quotes(edge.get_destination())
+                    label = edge.get('attributes', {}).get('label') if edge.get('attributes') else None
+                    self.logger.debug("Transitioning to %s with condition: %s", edge.get('destination'), condition)
+                    self.current_state = edge.get('destination')
                 else:
                     self.logger.warning("No transition found without condition, ending workflow.")
                     self.current_state = '__end__'
@@ -139,34 +137,34 @@ class WFEngine:
     @staticmethod
     def from_dot_string(dot_string, state_functions):
         """Creates an WFEngine from a DOT string."""
-        try:
-            graphs = pydot.graph_from_dot_data(dot_string)
-            if not graphs:
-                raise ValueError("No graph could be created from DOT string")
-            return WFEngine(graphs[0], state_functions)
-        except Exception as e:
-            print(f"Error parsing DOT string: {e}", file=sys.stderr)
-            raise
+        parser = DotParser()
+        parser.parse(dot_string)
+        if not parser.nodes or not parser.edges:
+            raise ValueError("No graph could be created from DOT string. Check for parsing errors.")
+
+        # Create a simplified graph representation for the engine.  The
+        #   engine doesn't need a full pydot graph object.
+        graph = {
+            'nodes': parser.nodes,
+            'edges': parser.edges
+        }
+        return WFEngine(graph, state_functions)
 
     @staticmethod
     def from_nodes_and_edges(nodes, edges, state_functions):
         """Creates an WFEngine from lists of nodes and edges."""
-        graph = pydot.Dot(graph_type='digraph')
-        for node in nodes:
-            graph.add_node(pydot.Node(node))
-        for edge in edges:
-            if isinstance(edge, tuple):  # Regular edge
-                graph.add_edge(pydot.Edge(edge[0], edge[1]))
-            else:  # Edge with attributes (e.g., label)
-                graph.add_edge(pydot.Edge(edge['src'], edge['dst'], label=edge['label']))
-        return WFEngine(graph, state_functions)
+        raise NotImplementedError("Use from_dot_string instead")
+
 
     def render_graph(self, output_file="workflow", format_type="png"):
         """
         Renders the graph to a file.
-        
+
         Args:
             output_file (str): Base name for the output file (without extension)
             format_type (str): Output format (e.g., 'png', 'pdf', 'svg')
         """
-        self.graph.write(f"{output_file}.{format_type}", format=format_type)
+        # self.graph.write(f"{output_file}.{format_type}", format=format_type)
+        # Not implemented, we are not using pydot
+        raise NotImplementedError("render_graph is not implemented")
+
