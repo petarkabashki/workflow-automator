@@ -23,25 +23,29 @@ import os
 
 # --- Custom Mock State Functions ---
 class MockStateFunctions:
-    async def request_input(self, context, executor):
+    def __init__(self):
+        self.context = {}  # Initialize context here
+        self.interaction_history = [] # Initialize history here
+
+    async def request_input(self):
         # Simulate user input by directly setting context values
-        context["name"] = "Test Name"
-        context["email"] = "test@example.com"
+        self.context["name"] = "Test Name"
+        self.context["email"] = "test@example.com"
         return "data_collected", None
 
-    async def extract_data(self, context, executor):
-        print(f"Extracting  {context}")
+    async def extract_data(self):
+        print(f"Extracting  {self.context}")
         return "data_extracted", None
 
-    async def check_all_data_collected(self, context, executor):
-        if "name" in context and "email" in context:
+    async def check_all_data_collected(self):
+        if "name" in self.context and "email" in self.context:
             return "all_data_collected", None
         else:
             return None, "override_state"
 
-    async def ask_confirmation(self, context, executor):
+    async def ask_confirmation(self):
         # Simulate different confirmation responses based on context
-        confirmation = context.get("confirmation_response", "yes")  # Default to "yes"
+        confirmation = self.context.get("confirmation_response", "yes")  # Default to "yes"
         if confirmation.lower() == "yes":
             return "confirmed", None
         elif confirmation.lower() == "no":
@@ -50,17 +54,17 @@ class MockStateFunctions:
             return "invalid_confirmation", None
 
 
-    async def process_data(self, context, executor):
+    async def process_data(self):
         print("Processing ")
-        print(f"  Name: {context['name']}")
-        print(f"  Email: {context['email']}")
+        print(f"  Name: {self.context['name']}")
+        print(f"  Email: {self.context['email']}")
         return "data_processed", None
 
-    async def __start__(self, context, executor):
+    async def __start__(self):
         return None, None  # No condition, no override
 
-    async def state1(self, context, executor):
-        if context.get("override_state_from_state1"):
+    async def state1(self):
+        if self.context.get("override_state_from_state1"):
             return (None, "override_state_target")
         return None, None # Default
 
@@ -95,10 +99,10 @@ async def test_engine_executor_run():
     # No longer mocking _request_input; interactions happen within state functions
     await engine.run()
     assert engine.current_state == "__end__"
-    assert "name" in engine.context
-    assert "email" in engine.context
-    assert engine.context["name"] == "Test Name"
-    assert engine.context["email"] == "test@example.com"
+    assert "name" in engine.state_functions.context
+    assert "email" in engine.state_functions.context
+    assert engine.state_functions.context["name"] == "Test Name"
+    assert engine.state_functions.context["email"] == "test@example.com"
 
 @pytest.mark.asyncio
 async def test_engine_executor_run_no_confirmation():
@@ -118,7 +122,7 @@ async def test_engine_executor_run_no_confirmation():
     engine = WFEngine.from_dot_string(dot_string, state_functions)
 
     # Set context to simulate "no" response
-    engine.context["confirmation_response"] = "no"
+    engine.state_functions.context["confirmation_response"] = "no"
     await engine.run()
     assert engine.current_state == "__end__"  # Should still end, but via different path
 
@@ -140,7 +144,7 @@ async def test_engine_executor_run_invalid_confirmation():
     engine = WFEngine.from_dot_string(dot_string, state_functions)
 
     # Set context to simulate "invalid" response, then engine will loop back to ask_confirmation
-    engine.context["confirmation_response"] = "invalid"
+    engine.state_functions.context["confirmation_response"] = "invalid"
     await engine.run()
     assert engine.current_state == '__end__'
 
@@ -181,7 +185,7 @@ async def test_engine_override_state():
     engine = WFEngine.from_nodes_and_edges(nodes, edges, state_functions)
 
     # Set a flag in the context to trigger the override in _run_state
-    engine.context["override_state_from_state1"] = True
+    engine.state_functions.context["override_state_from_state1"] = True
 
     # No longer mocking _request_input
     await engine.run()

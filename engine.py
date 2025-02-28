@@ -10,10 +10,10 @@ class WFEngine:
     def __init__(self, graph, state_functions):
         self.graph = graph
         self.state_functions = state_functions
-        self.context = {}  # Shared memory for state functions
+        # self.context = {}  # Moved to StateFunctions
+        # self.interaction_history = []  # Moved to StateFunctions
         self.current_state = "__start__"
-        self.interaction_history = []
-        self.lock = asyncio.Lock()  # Keep the lock for now, even if not used internally
+        self.lock = asyncio.Lock()
         print(f"WFEngine initialized. Initial state: {self.current_state}") # DEBUG
 
     async def _run_state(self, state_name):
@@ -21,11 +21,11 @@ class WFEngine:
 
         # Transition History
         print(f"Transitioning to state: {state_name}")
-        self.interaction_history.append(("system", f"Transition to state: {state_name}"))
+        self.state_functions.interaction_history.append(("system", f"Transition to state: {state_name}"))
 
         # Test-specific override using the context (for test_engine_override_state)
-        print(f"  _run_state: Checking override. state_name={state_name}, context={self.context}") # DEBUG
-        if state_name == "state1" and self.context.get("override_state_from_state1"):
+        print(f"  _run_state: Checking override. state_name={state_name}, context={self.state_functions.context}") # DEBUG
+        if state_name == "state1" and self.state_functions.context.get("override_state_from_state1"):
             print("  _run_state: Override triggered!") # DEBUG
             return (None, "override_state_target")
 
@@ -33,9 +33,9 @@ class WFEngine:
 
         if state_method:
             if asyncio.iscoroutinefunction(state_method):
-                next_state_info = await state_method(self.context, self)
+                next_state_info = await state_method() # Removed arguments
             else:
-                next_state_info = state_method(self.context, self)  # Should not happen
+                next_state_info = state_method()  # Removed arguments, Should not happen
 
             # Handle the tuple return value
             print(f"  _run_state: State function returned: {next_state_info}") # DEBUG
@@ -93,7 +93,7 @@ class WFEngine:
 
         print("Workflow finished.")
         print("Interaction History:")
-        for interaction in self.interaction_history:
+        for interaction in self.state_functions.interaction_history:
             print(f"- {interaction[0]}: {interaction[1]}")
 
     def evaluate_condition(self, label, condition):
