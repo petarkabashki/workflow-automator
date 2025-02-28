@@ -174,8 +174,10 @@ def test_engine_creation_from_nodes_and_edges():
 def test_state_execution():
     logger = logging.getLogger('test_state_execution')
     engine = create_test_engine(logger=logger)
-    engine._run_state('start')
-    assert engine.current_state == "__start__"  # Initial state
+    workflow = engine.run()
+    for state, condition, state_override in workflow:
+        assert state == "__start__"
+        break
 
 def test_conditional_transition():
     dot_string = """
