@@ -16,6 +16,7 @@ def create_test_engine(logger=None):
         start -> end;
     }
     """
+    print(f"DOT STRING: {dot_string}")
     state_functions = StateFunctions()
     setattr(state_functions, 'start', lambda: (None, 'end'))
     engine = WFEngine.from_dot_string(dot_string, state_functions)
