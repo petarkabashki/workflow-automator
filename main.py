@@ -1,7 +1,8 @@
 #%% 
 import asyncio
-from engine import WFEngine  # Use the new class name
+from engine import WFEngine
 from state_functions import StateFunctions
+from engine_observer import EngineObserver
 
 import nest_asyncio
 nest_asyncio.apply()
@@ -22,11 +23,18 @@ async def main():
     # Initialize the engine executor using from_dot_string
     engine = WFEngine.from_dot_string(dot_content, state_functions)
 
+    # Create and subscribe the observer
+    observer = EngineObserver()
+    engine.subscribe(observer)
+
     # Render the graph
     engine.render_graph()
 
     # Run the workflow
     await engine.run()
+
+    # Save the log
+    observer.save_log()
 
 if __name__ == "__main__":
     asyncio.run(main())
