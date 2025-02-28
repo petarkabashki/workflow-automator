@@ -74,11 +74,21 @@ def test_run_method():
      state_functions = StateFunctions()
      engine = WFEngine.from_dot_string(dot_string, state_functions)
 
-     # Mock input to simulate user interaction
-     state_functions.request_input = lambda: ("OK", None)
-     state_functions.extract_n_check = lambda: ("OK", None)
-     state_functions.ask_confirmation = lambda: ("Y", None)
-     state_functions.process_data = lambda: (None, None)
+     # Mock input by controlling the generator
+     workflow = engine.run()
+     
+     # Define mock responses
+     responses = ["OK", "OK", "Y", None]
+     states = ["request_input", "extract_n_check", "ask_confirmation", "process_data"]
+     
+     for i, (state, condition, state_override) in enumerate(workflow):
+        if state == "__end__":
+            break
+        assert state == states[i]
+        # Send the mock response to the generator
+        try:
+            next(workflow)
+        except StopIteration:
+            break
 
-     engine.run()
      assert engine.current_state == "__end__"

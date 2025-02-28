@@ -53,18 +53,24 @@ class WFEngine:
             return None, None
 
     def run(self):
-        """Runs the workflow."""
+        """Runs the workflow as a generator."""
         self.logger.info("Workflow started.")
-        while self.current_state != "__end__":
+        while True:
             self.logger.debug(f"Current state: {self.current_state}")
             condition, state_override = self._run_state(self.current_state)
+
+            yield self.current_state, condition, state_override
+
+            if self.current_state == "__end__":
+                self.logger.info("Workflow finished.")
+                break
 
             if state_override:
                 self.logger.debug(f"State override: {state_override}")
                 self.current_state = state_override
-                continue  # Use continue instead of break
+                continue
 
-            elif condition is not None:
+            if condition is not None:
                 found_transition = False
                 for edge in self.graph.get_edges():
                     if edge.get_source() == self.current_state:
@@ -91,8 +97,6 @@ class WFEngine:
                     if self.current_state != '__end__':
                         self.logger.warning("No transition found without condition, ending workflow.")
                         self.current_state = '__end__'
-
-        self.logger.info("Workflow finished.")
 
 
     def evaluate_condition(self, label, condition):
