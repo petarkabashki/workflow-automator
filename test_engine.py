@@ -21,6 +21,8 @@ def create_test_engine(logger=None):
     engine = WFEngine.from_dot_string(dot_string, state_functions)
     if logger:
         engine.set_logger(logger)
+    if engine is None:
+        raise Exception("WFEngine.from_dot_string returned None")
     return engine
 
 def test_engine_creation_from_dot_string():
