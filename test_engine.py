@@ -74,8 +74,10 @@ def test_state_execution():
         raise Exception("WFEngine.from_dot_string returned None")
 
     print(f"GRAPH: {engine.graph}")
-    engine._run_state('start')
-    assert engine.current_state == "__start__"  # Initial state
+    workflow = engine.run()
+    for state, condition, state_override in workflow:
+        assert state == "__start__"
+        break
 
 def test_conditional_transition():
     dot_string = """
