@@ -144,7 +144,7 @@ def test_state_execution():
     """
     print(f"DOT STRING: {dot_string}")
     state_functions = StateFunctions()
-    setattr(state_functions, 'start', lambda: (None, 'end'))
+    setattr(state_functions, '__start__', lambda: (None, '__end__'))
     engine = WFEngine.from_dot_string(dot_string, state_functions)
     engine.set_logger(logger)
     result, next_state = engine._run_state('start')
@@ -155,8 +155,8 @@ def test_conditional_transition():
     logger = setup_test_logger('test_conditional_transition')
     dot_string = """
     strict digraph {
-        __start__ -> a [label="OK (Success)"];
-        __start__ -> b [label="NOK (Failure)"];
+        __start__ -> a [label="(label == 'OK')"];
+        __start__ -> b [label="(label == 'NOK')"];
         a -> __end__;
         b -> __end__;
     }

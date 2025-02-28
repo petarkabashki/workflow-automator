@@ -1,4 +1,5 @@
 from dot_parser import DotParser
+import utils
 
 class WFEngine:
     """
@@ -92,9 +93,9 @@ class WFEngine:
             return True  # If no condition is defined, consider it True
 
         try:
-            # Basic boolean conditions
-            result = eval(condition, {"label": label})
-            return result
+            # Basic boolean conditions with restricted environment
+            result = eval(condition, {"__builtins__": {}}, {"label": label})
+            return bool(result)
         except Exception as e:
             if self.logger:
                 self.logger.error(f"Error evaluating condition '{condition}': {e}")
@@ -139,6 +140,12 @@ class WFEngine:
                     if self.logger:
                         self.logger.debug(f"Multiple transitions available from {self.current_state}")
                     
+                    # Check if all transitions have empty conditions
+                    if all(not cond for _, cond in possible_transitions):
+                        if self.logger:
+                            self.logger.error("Multiple transitions require conditions")
+                        break
+                    
                     # Try to find a transition that matches the result
                     matched = False
                     for dest, condition in possible_transitions:
@@ -180,13 +187,13 @@ class WFEngine:
         if not parser.nodes or not parser.edges:
             raise ValueError("No graph could be created from DOT string. Check for parsing errors.")
 
-        nodes = [node['name'].strip() for node in parser.nodes]
+        nodes = [utils.strip_quotes(node['name']).strip() for node in parser.nodes]
         
         # Build transitions dictionary
         transitions = {}
         for edge in parser.edges:
-            source = edge['source'].strip()
-            destination = edge['destination'].strip()
+            source = utils.strip_quotes(edge['source']).strip()
+            destination = utils.strip_quotes(edge['destination']).strip()
             label = edge.get('attributes', {}).get('label', '')  # Default to empty string if no label
             
             if source not in transitions:
