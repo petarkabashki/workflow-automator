@@ -151,7 +151,7 @@ def test_conditional_transition_logs():
         'test_conditional_transition_logs - DEBUG - Transitioning to a based on condition OK',
         'test_conditional_transition_logs - DEBUG - Current state: a',
         'test_conditional_transition_logs - DEBUG - Running state: a',
-        'test_conditional_transition_logs - DEBUG - Transitioning to __end__ with condition: None',
+        'test_conditional_transition_logs - DEBUG - Transitioning to __end__',
         'test_conditional_transition_logs - INFO - Workflow finished.'
     ]
     

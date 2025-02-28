@@ -59,8 +59,8 @@ class WFEngine:
         """Runs the workflow as a generator."""
         self.logger.info("Workflow started.")
         while True:
-            if self.current_state in ["__end__", "end"]:  # Handle both cases temporarily
-                self.logger.info("Workflow finished.")
+            if self.current_state == "__end__":
+                self.logger.info("Workflow finished. Current state: %s", self.current_state)
                 yield self.current_state, None, None
                 break
 
