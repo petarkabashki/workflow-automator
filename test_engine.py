@@ -237,6 +237,7 @@ def test_engine_creation_from_nodes_and_edges():
     assert engine is not None
     assert isinstance(engine.graph, pydot.Dot)
 
+# Run only this test. AI!
 def test_state_execution():
     logger = setup_test_logger('test_state_execution')
     dot_string = """
@@ -252,8 +253,8 @@ def test_state_execution():
         engine.set_logger(logger)
     if engine is None:
         raise Exception("WFEngine.from_dot_string returned None")
-
     print(f"GRAPH: {engine.graph}")
+# Run only this test by passing it to 'run_tests.sh'. collect the emitted output from the engine and make sure it contains the states and the transition. AI!
     workflow = engine.start()
     for state, condition, state_override in workflow:
         assert state == "__start__"
