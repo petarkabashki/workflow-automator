@@ -93,16 +93,16 @@ def test_run_method(monkeypatch):
         response_index += 1
         return response
 
-    monkeypatch.setattr('state_functions.StateFunctions.request_input', lambda self: ("OK", None))
+    # monkeypatch.setattr('state_functions.StateFunctions.request_input', lambda self: ("OK", None))
     monkeypatch.setattr('builtins.input', lambda *args: mock_input())
 
     states = ["__start__", "request_input", "extract_n_check", "ask_confirmation", "process_data"]
     
     i = 0
     for state, condition, state_override in workflow:
-       if state == "__end__":
-           break
-       assert state == states[i]
-       i += 1
+        if state == "__end__":
+            break
+        assert state == states[i]
+        i += 1
 
     #assert engine.current_state == "__end__"
