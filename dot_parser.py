@@ -12,6 +12,7 @@ class DotParser:
     def parse(self, dot_string):
         """Parse a DOT language string and create a graph."""
         lines = dot_string.split('\n')
+        lines = [line.strip() for line in lines]
 
         for line in lines:
             line = line.strip()
