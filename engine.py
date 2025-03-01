@@ -1,7 +1,5 @@
 from dot_parser import DotParser
 import utils
-
-# assume the logger is always available and remove the checks of the kind 'if self.logger:'. AI!
 class WFEngine:
     """
     The WFEngine class manages state transitions and state method invocations.
@@ -23,13 +21,11 @@ class WFEngine:
 
     def _run_state(self, state_name):
         """Runs the method associated with the given state."""
-        if self.logger:
-            self.logger.debug(f"Running state: {state_name}")
+        self.logger.debug(f"Running state: {state_name}")
 
         # Check if the state function exists as a method in the StateFunctions instance
         if not hasattr(self.state_functions, state_name):
-            if self.logger:
-                self.logger.error(f"No function found for state: {state_name}")
+            self.logger.error(f"No function found for state: {state_name}")
             return None, None  # No function associated with the state
 
         func = getattr(self.state_functions, state_name)
@@ -37,30 +33,25 @@ class WFEngine:
             result, next_state = func()
             return result, next_state
         except Exception as e:
-            if self.logger:
-                self.logger.error(f"Error in state function {state_name}: {e}")
+            self.logger.error(f"Error in state function {state_name}: {e}")
             return None, None
 
     def start(self):
         """Starts the engine from the initial state."""
-        if self.logger:
-            self.logger.debug("Starting engine")
+        self.logger.debug("Starting engine")
 
         if not self.states:
-            if self.logger:
-                self.logger.warning("No states defined.")
+            self.logger.warning("No states defined.")
             return
 
         # Find and set the initial state
         initial_state = self._find_initial_state()
         if initial_state:
             self.current_state = initial_state
-            if self.logger:
-                self.logger.debug(f"Initial state: {self.current_state}")
+            self.logger.debug(f"Initial state: {self.current_state}")
             self.run()  # Start execution from the initial state
         else:
-            if self.logger:
-                self.logger.error("No valid initial state found.")
+            self.logger.error("No valid initial state found.")
 
     def _find_initial_state(self):
         """Determines the initial state of the workflow."""
@@ -77,8 +68,7 @@ class WFEngine:
         if not initial_states:
             return None  # No initial state found
         elif len(initial_states) > 1:
-            if self.logger:
-                self.logger.warning("Multiple potential initial states found. Using the first one.")
+            self.logger.warning("Multiple potential initial states found. Using the first one.")
             return initial_states[0]  # Return the first potential initial state
         else:
             return initial_states[0]  # Single initial state
@@ -88,8 +78,7 @@ class WFEngine:
         Evaluates a condition based on its label.
         Conditions are boolean expressions defined as strings.
         """
-        if self.logger:
-            self.logger.debug(f"Evaluating condition: {label} ({condition})")
+        self.logger.debug(f"Evaluating condition: {label} ({condition})")
 
         if not condition:
             return True  # If no condition is defined, consider it True
@@ -99,8 +88,7 @@ class WFEngine:
             result = eval(condition, {"__builtins__": {}}, {"label": label})
             return bool(result)
         except Exception as e:
-            if self.logger:
-                self.logger.error(f"Error evaluating condition '{condition}': {e}")
+            self.logger.error(f"Error evaluating condition '{condition}': {e}")
             return False  # Consider condition as False on error
 
     def run(self):
@@ -109,21 +97,18 @@ class WFEngine:
         Handles transitions between states based on state function results.
         """
         if not self.current_state:
-            if self.logger:
-                self.logger.error("No current state to run from.")
+            self.logger.error("No current state to run from.")
             return
 
         while self.current_state and self.current_state != "__end__":
-            if self.logger:
-                self.logger.debug(f"Current state: {self.current_state}")
+            self.logger.debug(f"Current state: {self.current_state}")
             
             # Run the current state function
             result, next_state = self._run_state(self.current_state)
             
             # If the state function specified the next state directly, use it
             if next_state:
-                if self.logger:
-                    self.logger.debug(f"State function returned next state: {next_state}")
+                self.logger.debug(f"State function returned next state: {next_state}")
                 self.current_state = next_state
                 continue
             
@@ -134,52 +119,43 @@ class WFEngine:
                 if len(possible_transitions) == 1:
                     # If only one transition, take it
                     next_state, _ = possible_transitions[0]
-                    if self.logger:
-                        self.logger.debug(f"Taking only available transition to: {next_state}")
+                    self.logger.debug(f"Taking only available transition to: {next_state}")
                     self.current_state = next_state
                 elif len(possible_transitions) > 1:
                     # Multiple transitions - need to evaluate conditions
-                    if self.logger:
-                        self.logger.debug(f"Multiple transitions available from {self.current_state}")
+                    self.logger.debug(f"Multiple transitions available from {self.current_state}")
                     
                     # Check if all transitions have empty conditions
                     if all(not cond for _, cond in possible_transitions):
-                        if self.logger:
-                            self.logger.error("Multiple transitions require conditions")
+                        self.logger.error("Multiple transitions require conditions")
                         break
                     
                     # Try to find a transition that matches the result
                     matched = False
                     for dest, condition in possible_transitions:
                         if self.evaluate_condition(result, condition):
-                            if self.logger:
-                                self.logger.debug(f"Condition matched for transition to {dest}")
+                            self.logger.debug(f"Condition matched for transition to {dest}")
                             self.current_state = dest
                             matched = True
                             break
                     
                     if not matched:
                         # No matching transition found
-                        if self.logger:
-                            self.logger.warning(f"No matching transition found for result: {result}")
+                        self.logger.warning(f"No matching transition found for result: {result}")
                         break
                 else:
                     # No transitions defined
-                    if self.logger:
-                        self.logger.warning(f"No transitions defined from state: {self.current_state}")
+                    self.logger.warning(f"No transitions defined from state: {self.current_state}")
                     break
             else:
                 # No transitions from current state
-                if self.logger:
-                    self.logger.warning(f"No transitions defined from state: {self.current_state}")
+                self.logger.warning(f"No transitions defined from state: {self.current_state}")
                 break
 
         if self.current_state == "__end__":
-            if self.logger:
-                self.logger.debug("Workflow completed successfully")
+            self.logger.debug("Workflow completed successfully")
         else:
-            if self.logger:
-                self.logger.warning("Workflow stopped without reaching end state")
+            self.logger.warning("Workflow stopped without reaching end state")
 
     @staticmethod
     def from_dot_string(dot_string, state_functions):
