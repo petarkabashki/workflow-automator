@@ -64,8 +64,7 @@ def test_multiple_transitions_without_condition_logs():
     engine.start() # start
     log_content = get_log_contents('test_multiple_transitions_without_condition_logs')
     assert "No function found for state" not in log_content
-    #assert "Multiple transitions" in log_content #Removed. No conditions.
-    #assert "No condition" in log_content #Removed. No conditions.
+    assert "Multiple transitions available" in log_content
 
 def test_conditional_transition_logs():
     """
