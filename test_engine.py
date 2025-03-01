@@ -3,8 +3,7 @@ from engine import WFEngine
 from state_functions import StateFunctions
 import logging
 
-# The tests should take into account that the engine is a generator that yields it's current state !
-# Helper functions for tests
+# remove the below function and don't use it in tests AI!
 def get_log_contents(test_name):
     with open(f'engine_log.txt', 'r') as f:
         return f.read()
