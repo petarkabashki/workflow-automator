@@ -108,7 +108,7 @@ class WFEngine:
                 
                 # If left side is "label", compare with result
                 if left == "label":
-                    return result == right
+                    return str(result) == str(right)
         
         # For direct comparison (no "=="), just check if result matches condition
         return result == condition
