@@ -1,13 +1,13 @@
 strict digraph {
     __start__ -> request_input;
     request_input -> extract_n_check[label="OK (Name and email provided)"];
-    request_input -> request_input[label="NOK (Missing name or email)"];
+    // request_input -> request_input[label="NOK (Missing name or email)"];
     // request_input -> __end__[label="QUIT"]
 
     extract_n_check -> request_input[label="NOK (Data missing)"];
     extract_n_check -> ask_confirmation[label="OK (Data extracted)"];
     ask_confirmation -> process_data[label="Y (Confirmed)"];
-    ask_confirmation -> request_input[label="N (Not confirmed)"];
+    // ask_confirmation -> request_input[label="N (Not confirmed)"];
     ask_confirmation -> __end__[label="Q (Quit)"];
     process_data -> __end__;
 }
