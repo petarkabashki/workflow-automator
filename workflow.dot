@@ -7,7 +7,7 @@ strict digraph {
     extract_n_check -> request_input[label="NOK (Data missing)"];
     extract_n_check -> ask_confirmation[label="OK (Data extracted)"];
     ask_confirmation -> process_data[label="Y (Confirmed)"];
-    // ask_confirmation -> request_input[label="N (Not confirmed)"];
+    ask_confirmation -> request_input[label="N (Not confirmed)"];
     ask_confirmation -> __end__[label="Q (Quit)"];
     process_data -> __end__;
 }

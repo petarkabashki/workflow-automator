@@ -44,7 +44,7 @@ class StateFunctions:
             return "Q", None
         else:
             print("Invalid input. Please enter 'yes', 'no', or 'quit'.")
-            return "invalid_confirmation", "ask_confirmation" # Loop using override
+            return None, None # Stay in ask_confirmation state
 
 
     def process_data(self):
