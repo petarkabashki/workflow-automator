@@ -21,13 +21,10 @@ def main():
     # Render the graph visualization
     engine.render_graph()
 
-    # Run the workflow and process all states
-    workflow = engine.start()
-    for state, condition, state_override in workflow:
-        if condition:
-            print(f"State: {state}, Condition: {condition}")
-        else:
-            print(f"State: {state}")
+    # Run the workflow
+    engine.start()
+    # The workflow execution is handled by the engine internally
+    # No need to iterate over the result as it doesn't return anything
 
 if __name__ == "__main__":
     main()
