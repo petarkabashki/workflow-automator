@@ -84,18 +84,36 @@ class WFEngine:
         else:
             return initial_states[0]  # Single initial state
 
-    def evaluate_condition(self, label, condition):
+    def evaluate_condition(self, result, condition):
         """
-        Evaluates a condition based on its label.
-        Compares the result from state function with the condition in the transition.
+        Evaluates a condition based on the result from the state function.
+        Compares the result with the condition in the transition.
         """
-        self.logger.debug(f"Evaluating condition: {label} ({condition})")
+        self.logger.debug(f"Evaluating condition: result='{result}' against condition='{condition}'")
 
         if not condition:
             return True  # If no condition is defined, consider it True
 
-        # Simply check if the condition matches the result from the state function
-        return condition == label
+        # For simple conditions, just check if the result matches the condition
+        if "==" in condition:
+            # Parse condition like "label == 'OK'"
+            parts = condition.split("==", 1)
+            if len(parts) == 2:
+                left = parts[0].strip()
+                right = parts[1].strip()
+                
+                # Remove quotes if present
+                if right.startswith("'") and right.endswith("'"):
+                    right = right[1:-1]
+                elif right.startswith('"') and right.endswith('"'):
+                    right = right[1:-1]
+                
+                # If left side is "label", compare with result
+                if left == "label":
+                    return result == right
+        
+        # For direct comparison (no "=="), just check if result matches condition
+        return condition == result
 
     def run(self):
         """
@@ -189,10 +207,11 @@ class WFEngine:
                 
                 # Extract condition from label if present
                 condition = ""
-                if label and "(" in label and ")" in label:
-                    parts = label.split("(", 1)
-                    if len(parts) > 1:
-                        condition = parts[1].rsplit(")", 1)[0].strip()
+                if label:
+                    # Remove parentheses if they exist
+                    if "(" in label and ")" in label:
+                        label = label.split("(", 1)[1].rsplit(")", 1)[0].strip()
+                    condition = label.strip()
                 
                 transitions[source].append((destination, condition))
             
