@@ -87,20 +87,15 @@ class WFEngine:
     def evaluate_condition(self, label, condition):
         """
         Evaluates a condition based on its label.
-        Conditions are boolean expressions defined as strings.
+        Compares the result from state function with the condition in the transition.
         """
         self.logger.debug(f"Evaluating condition: {label} ({condition})")
 
         if not condition:
             return True  # If no condition is defined, consider it True
 
-        try:
-            # Basic boolean conditions with restricted environment
-            result = eval(condition, {"__builtins__": {}}, {"label": label})
-            return bool(result)
-        except Exception as e:
-            self.logger.error(f"Error evaluating condition '{condition}': {e}")
-            return False  # Consider condition as False on error
+        # Simply check if the condition matches the result from the state function
+        return condition == label
 
     def run(self):
         """
@@ -145,7 +140,7 @@ class WFEngine:
                     # Try to find a transition that matches the result
                     matched = False
                     for dest, condition in possible_transitions:
-                        if self.evaluate_condition(result, condition):
+                        if self.evaluate_condition(condition, result):
                             self.logger.debug(f"Condition matched for transition to {dest}")
                             self.current_state = dest
                             matched = True
