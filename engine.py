@@ -1,5 +1,7 @@
 from dot_parser import DotParser
 import utils
+
+# Implement the engine as a generator, also expecting the state functions to be generators to be iterated over. Expect each state function to return return on it's iterations a flag indicating whether it's finished. AI! 
 class WFEngine:
     """
     The WFEngine class manages state transitions and state method invocations.
