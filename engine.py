@@ -90,6 +90,7 @@ class WFEngine:
         Compares the result with the condition in the transition.
         """
         self.logger.debug(f"Evaluating condition: result='{result}' against condition='{condition}'")
+        self.logger.debug(f"evaluate_condition: result type={type(result)}, condition type={type(condition)}")
 
         if not condition:
             return True  # If no condition is defined, consider it True
