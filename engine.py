@@ -112,6 +112,7 @@ class WFEngine:
         # For direct comparison (no "=="), just check if result matches condition
         return result == condition
 
+# This should be a generator yielding to the caller that loops over it AI!
     def run(self):
         """
         Executes the workflow starting from the current state.
