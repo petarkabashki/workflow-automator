@@ -1,5 +1,6 @@
 import re
 
+# comment out all print statements. AI!
 class DotParser:
     def __init__(self):
         self.nodes = []
