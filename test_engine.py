@@ -3,29 +3,47 @@ from engine import WFEngine
 from state_functions import StateFunctions
 import logging
 
-# remove the below function and don't use it in tests AI!
-def get_log_contents(test_name):
-    with open(f'engine_log.txt', 'r') as f:
-        return f.read()
-
 def clean_test_logs():
     with open(f'engine_log.txt', 'w') as f:
         f.write('')
+
+class LogCaptureHandler(logging.Handler):
+    def __init__(self):
+        super().__init__()
+        self.log_records = []
+        
+    def emit(self, record):
+        self.log_records.append(self.format(record))
+        
+    def get_logs(self):
+        return '\n'.join(self.log_records)
+        
+    def clear(self):
+        self.log_records = []
 
 def setup_test_logger(test_name):
     clean_test_logs()  # Ensure logs are clean before each test
     logger = logging.getLogger(test_name)
     logger.setLevel(logging.DEBUG)
+    
+    # File handler for backward compatibility
     fh = logging.FileHandler('engine_log.txt')
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     fh.setFormatter(formatter)
+    
+    # Memory capture handler
+    ch = LogCaptureHandler()
+    ch.setFormatter(formatter)
+    
+    logger.handlers = []  # Clear any existing handlers
     logger.addHandler(fh)
-    return logger
+    logger.addHandler(ch)
+    return logger, ch
 
 def create_test_engine(logger=None, dot_string=None):
     """Creates a test engine instance, optionally with a custom dot string."""
     if logger is None:
-        logger = logging.getLogger('test_engine')
+        logger, _ = setup_test_logger('test_engine')
     if dot_string is None:
         dot_string = """
         strict digraph {
@@ -44,7 +62,7 @@ def test_multiple_transitions_without_condition_logs():
     Test that appropriate error messages are logged when multiple transitions
     exist but no condition is provided.
     """
-    logger = setup_test_logger('test_multiple_transitions_without_condition_logs')
+    logger, log_capture = setup_test_logger('test_multiple_transitions_without_condition_logs')
     dot_string = """
     strict digraph {
         __start__ -> a;
@@ -61,7 +79,7 @@ def test_multiple_transitions_without_condition_logs():
     engine = WFEngine.from_dot_string(dot_string, state_functions)  # Initialize
     engine.set_logger(logger) # set logger
     engine.start() # start
-    log_content = get_log_contents('test_multiple_transitions_without_condition_logs')
+    log_content = log_capture.get_logs()
     assert "No function found for state" not in log_content
     assert "Multiple transitions available" in log_content
 
@@ -69,7 +87,7 @@ def test_conditional_transition_logs():
     """
     Test that appropriate debug messages are logged during conditional transitions.
     """
-    logger = setup_test_logger('test_conditional_transition_logs')
+    logger, log_capture = setup_test_logger('test_conditional_transition_logs')
     dot_string = """
     strict digraph {
         __start__ -> a;
@@ -86,7 +104,7 @@ def test_conditional_transition_logs():
     engine = WFEngine.from_dot_string(dot_string, state_functions)
     engine.set_logger(logger)
     engine.start()
-    log_content = get_log_contents('test_conditional_transition_logs')
+    log_content = log_capture.get_logs()
     assert "Running state: __start__" in log_content
     #assert "Evaluating condition" in log_content  # Removed condition eval
     assert "No function found for state" not in log_content
@@ -96,7 +114,7 @@ def test_multiple_transitions_without_condition():
     Test that the engine properly handles the case where a state has multiple possible
     transitions but no condition is provided by the state function.
     """
-    logger = setup_test_logger('test_multiple_transitions_without_condition')
+    logger, log_capture = setup_test_logger('test_multiple_transitions_without_condition')
     dot_string = """
     strict digraph {
         __start__ -> a;
@@ -116,11 +134,11 @@ def test_multiple_transitions_without_condition():
     engine.start() # start engine
     # The engine should have tried to transition but may not have succeeded
     # due to multiple transitions without a clear condition
-    log_content = get_log_contents('test_multiple_transitions_without_condition')
+    log_content = log_capture.get_logs()
     assert "Multiple transitions available" in log_content
 
 def test_engine_creation_from_dot_string():
-    logger = setup_test_logger('test_engine_creation_from_dot_string')
+    logger, _ = setup_test_logger('test_engine_creation_from_dot_string')
     engine = create_test_engine(logger=logger)
     assert engine is not None
     assert "__start__" in engine.states
@@ -135,7 +153,7 @@ def test_engine_creation_from_nodes_and_edges():
         engine = WFEngine.from_nodes_and_edges(nodes, edges, state_functions)
 
 def test_state_execution():
-    logger = setup_test_logger('test_state_execution')
+    logger, _ = setup_test_logger('test_state_execution')
     dot_string = """
     strict digraph {
         __start__ -> __end__;
@@ -151,7 +169,7 @@ def test_state_execution():
     assert next_state == '__end__'
 
 def test_conditional_transition():
-    logger = setup_test_logger('test_conditional_transition')
+    logger, log_capture = setup_test_logger('test_conditional_transition')
     dot_string = """
     strict digraph {
         __start__ -> a [label="OK"];
@@ -167,12 +185,12 @@ def test_conditional_transition():
     engine = WFEngine.from_dot_string(dot_string, state_functions)
     engine.set_logger(logger)
     engine.start()
-    log_content = get_log_contents('test_conditional_transition')
+    log_content = log_capture.get_logs()
     assert "Condition matched for transition" in log_content
     assert "No function found for state" not in log_content
 
 def test_run_method(monkeypatch):
-    logger = setup_test_logger('test_run_method')
+    logger, log_capture = setup_test_logger('test_run_method')
     dot_string = """
        strict digraph {
            __start__ -> request_input;
@@ -213,5 +231,5 @@ def test_run_method(monkeypatch):
     engine = WFEngine.from_dot_string(dot_string, state_functions)
     engine.set_logger(logger)
     engine.start() # start
-    log_content = get_log_contents('test_run_method')
+    log_content = log_capture.get_logs()
     assert "Workflow completed successfully" in log_content
