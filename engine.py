@@ -128,11 +128,16 @@ class WFEngine:
             # Run the current state function
             result, next_state = self._run_state(self.current_state)
             
+            # Log the result of the state function
+            self.logger.debug(f"State function for {self.current_state} returned: result='{result}', next_state='{next_state}'")
+            
             # If the state function specified the next state directly, use it
             if next_state:
                 self.logger.debug(f"State function returned next state: {next_state}")
                 self.current_state = next_state
                 continue
+            else:
+                self.logger.debug(f"State function did not return next state, checking transitions.")
             
             # Otherwise, check transitions from the current state
             if self.current_state in self.transitions:

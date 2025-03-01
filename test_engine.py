@@ -111,6 +111,8 @@ def test_conditional_transition_logs():
     assert "Condition matched for transition to a" in log_content # Verify condition log
     assert "Running state: __start__" in log_content # Verify state execution log
     assert "Running state: a" in log_content # Verify state execution log
+    assert "State function for __start__ returned" in log_content # Verify state function result log
+    assert "State function did not return next state, checking transitions" in log_content # Verify transition check log
     assert "Workflow completed successfully" in log_content # Verify workflow completion log
 
 def test_multiple_transitions_without_condition():
