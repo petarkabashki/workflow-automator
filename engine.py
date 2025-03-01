@@ -103,7 +103,8 @@ class WFEngine:
             return
 
         while self.current_state and self.current_state != "__end__":
-            self.logger.debug(f"Current state: {self.current_state}")
+            yield self.current_state  # Yield the current state name
+            self.logger.debug(f"Current state: {self.current_state}") # Log after yielding
             
             # Run the current state function
             result, next_state = self._run_state(self.current_state)
