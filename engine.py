@@ -51,7 +51,9 @@ class WFEngine:
         if initial_state:
             self.current_state = initial_state
             self.logger.debug(f"Initial state: {self.current_state}")
-            self.run()  # Start execution from the initial state
+            workflow_generator = self.run()  # Get the generator
+            for state in workflow_generator:    # Iterate through the generator
+                self.logger.debug(f"Generator yielded state: {state}") # Log each yielded state
         else:
             self.logger.error("No valid initial state found.")
 
