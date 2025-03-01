@@ -1,18 +1,2 @@
-2025-03-01 00:37:35,766 - test_run_method - DEBUG - Starting engine
-2025-03-01 00:37:35,766 - test_run_method - DEBUG - Initial state: __start__
-2025-03-01 00:37:35,766 - test_run_method - DEBUG - Current state: __start__
-2025-03-01 00:37:35,766 - test_run_method - DEBUG - Running state: __start__
-2025-03-01 00:37:35,766 - test_run_method - DEBUG - State function returned next state: request_input
-2025-03-01 00:37:35,766 - test_run_method - DEBUG - Current state: request_input
-2025-03-01 00:37:35,766 - test_run_method - DEBUG - Running state: request_input
-2025-03-01 00:37:35,766 - test_run_method - DEBUG - State function returned next state: extract_n_check
-2025-03-01 00:37:35,766 - test_run_method - DEBUG - Current state: extract_n_check
-2025-03-01 00:37:35,767 - test_run_method - DEBUG - Running state: extract_n_check
-2025-03-01 00:37:35,767 - test_run_method - DEBUG - State function returned next state: ask_confirmation
-2025-03-01 00:37:35,767 - test_run_method - DEBUG - Current state: ask_confirmation
-2025-03-01 00:37:35,767 - test_run_method - DEBUG - Running state: ask_confirmation
-2025-03-01 00:37:35,767 - test_run_method - DEBUG - State function returned next state: process_data
-2025-03-01 00:37:35,767 - test_run_method - DEBUG - Current state: process_data
-2025-03-01 00:37:35,767 - test_run_method - DEBUG - Running state: process_data
-2025-03-01 00:37:35,767 - test_run_method - DEBUG - State function returned next state: __end__
-2025-03-01 00:37:35,767 - test_run_method - DEBUG - Workflow completed successfully
+2025-03-01 23:29:05,152 - test_run_method - DEBUG - Starting engine
+2025-03-01 23:29:05,152 - test_run_method - DEBUG - Initial state: __start__
