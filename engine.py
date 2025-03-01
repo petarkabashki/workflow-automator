@@ -1,7 +1,7 @@
 from dot_parser import DotParser
 import utils
 
-# Implement the engine as a generator, also expecting the state functions to be generators to be iterated over. Expect each state function to return return on it's iterations a flag indicating whether it's finished. AI! 
+# Workflow engine implementation as a generator
 class WFEngine:
     """
     The WFEngine class manages state transitions and state method invocations.
@@ -103,17 +103,14 @@ class WFEngine:
                 right = parts[1].strip()
                 
                 # Remove quotes if present
-                if right.startswith("'") and right.endswith("'"):
-                    right = right[1:-1]
-                elif right.startswith('"') and right.endswith('"'):
-                    right = right[1:-1]
+                right = utils.strip_quotes(right)
                 
                 # If left side is "label", compare with result
                 if left == "label":
                     return result == right
         
         # For direct comparison (no "=="), just check if result matches condition
-        return condition == result
+        return result == condition
 
     def run(self):
         """
@@ -143,7 +140,7 @@ class WFEngine:
                 
                 if len(possible_transitions) == 1:
                     # If only one transition, take it
-                    next_state, _ = possible_transitions[0]
+                    next_state, condition = possible_transitions[0]
                     self.logger.debug(f"Taking only available transition to: {next_state}")
                     self.current_state = next_state
                 elif len(possible_transitions) > 1:
@@ -158,7 +155,7 @@ class WFEngine:
                     # Try to find a transition that matches the result
                     matched = False
                     for dest, condition in possible_transitions:
-                        if self.evaluate_condition(condition, result):
+                        if self.evaluate_condition(result, condition):
                             self.logger.debug(f"Condition matched for transition to {dest}")
                             self.current_state = dest
                             matched = True
@@ -211,7 +208,7 @@ class WFEngine:
                     # Remove parentheses if they exist
                     if "(" in label and ")" in label:
                         label = label.split("(", 1)[1].rsplit(")", 1)[0].strip()
-                    condition = label.strip()
+                    condition = utils.strip_quotes(label.strip())
                 
                 transitions[source].append((destination, condition))
             

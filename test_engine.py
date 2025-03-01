@@ -3,7 +3,6 @@ from engine import WFEngine
 from state_functions import StateFunctions
 import logging
 
-# don't check log files AI!
 # Helper functions for tests
 def get_log_contents(test_name):
     with open(f'engine_log.txt', 'r') as f:
