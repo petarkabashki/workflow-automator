@@ -91,15 +91,15 @@ def test_conditional_transition_logs():
     logger, log_capture = setup_test_logger('test_conditional_transition_logs')
     dot_string = """
     strict digraph {
-        __start__ -> a;
-        __start__ -> b;
+        __start__ -> a [label="OK"];
+        __start__ -> b [label="NOK"];
         a -> __end__;
         b -> __end__;
     }
     """
     state_functions = StateFunctions()
     setattr(state_functions, '__start__', lambda: ("OK", None))
-    setattr(state_functions, 'a', lambda: (None, None))
+    setattr(state_functions, 'a', lambda: (None, "__end__"))
     setattr(state_functions, 'b', lambda: (None, None))
 
     engine = WFEngine.from_dot_string(dot_string, state_functions)
@@ -110,6 +110,8 @@ def test_conditional_transition_logs():
     log_content = log_capture.get_logs() # Optionally keep log checks
     assert "Condition matched for transition to a" in log_content # Verify condition log
     assert "Running state: __start__" in log_content # Verify state execution log
+    assert "Running state: a" in log_content # Verify state execution log
+    assert "Workflow completed successfully" in log_content # Verify workflow completion log
 
 def test_multiple_transitions_without_condition():
     """
