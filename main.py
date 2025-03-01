@@ -21,10 +21,11 @@ def main():
     # Render the graph visualization
     engine.render_graph()
 
-    # Run the workflow
-    engine.start()
-    # The workflow execution is handled by the engine internally
-    # No need to iterate over the result as it doesn't return anything
+    # Start the workflow and iterate through states
+    workflow_generator = engine.start()
+    for state in workflow_generator:
+        print(f"Entering state: {state}")
+        # Here you can add any state-specific processing in main.py if needed
 
 if __name__ == "__main__":
     main()
