@@ -1,6 +1,7 @@
 from dot_parser import DotParser
 import utils
 
+# assume the logger is always available and remove the checks of the kind 'if self.logger:'. AI!
 class WFEngine:
     """
     The WFEngine class manages state transitions and state method invocations.
