@@ -77,11 +77,12 @@ def test_multiple_transitions_without_condition_logs():
     setattr(state_functions, 'b', lambda: (None, None))
 
     engine = WFEngine.from_dot_string(dot_string, state_functions)  # Initialize
-    engine.set_logger(logger) # set logger
-    engine.start() # start
-    log_content = log_capture.get_logs()
-    assert "No function found for state" not in log_content
-    assert "Multiple transitions available" in log_content
+    engine.set_logger(logger)
+    state_sequence = list(engine.start())
+    assert state_sequence == ['__start__'] # Engine should stop at __start__
+
+    log_content = log_capture.get_logs() # Optionally keep log check for specific message
+    assert "Multiple transitions available" in log_content # Verify log message
 
 def test_conditional_transition_logs():
     """
@@ -103,11 +104,12 @@ def test_conditional_transition_logs():
 
     engine = WFEngine.from_dot_string(dot_string, state_functions)
     engine.set_logger(logger)
-    engine.start()
-    log_content = log_capture.get_logs()
-    assert "Running state: __start__" in log_content
-    #assert "Evaluating condition" in log_content  # Removed condition eval
-    assert "No function found for state" not in log_content
+    state_sequence = list(engine.start())
+    assert state_sequence == ['__start__', 'a', '__end__'] # Expected path
+
+    log_content = log_capture.get_logs() # Optionally keep log checks
+    assert "Condition matched for transition to a" in log_content # Verify condition log
+    assert "Running state: __start__" in log_content # Verify state execution log
 
 def test_multiple_transitions_without_condition():
     """
@@ -131,11 +133,11 @@ def test_multiple_transitions_without_condition():
 
     engine = WFEngine.from_dot_string(dot_string, state_functions)
     engine.set_logger(logger)
-    engine.start() # start engine
-    # The engine should have tried to transition but may not have succeeded
-    # due to multiple transitions without a clear condition
-    log_content = log_capture.get_logs()
-    assert "Multiple transitions available" in log_content
+    state_sequence = list(engine.start())
+    assert state_sequence == ['__start__'] # Engine should stop at __start__
+
+    log_content = log_capture.get_logs() # Optionally keep log check
+    assert "Multiple transitions available" in log_content # Verify log message
 
 def test_engine_creation_from_dot_string():
     logger, _ = setup_test_logger('test_engine_creation_from_dot_string')
@@ -184,10 +186,11 @@ def test_conditional_transition():
     setattr(state_functions, 'b', lambda: (None, "__end__"))
     engine = WFEngine.from_dot_string(dot_string, state_functions)
     engine.set_logger(logger)
-    engine.start()
-    log_content = log_capture.get_logs()
-    assert "Condition matched for transition" in log_content
-    assert "No function found for state" not in log_content
+    state_sequence = list(engine.start())
+    assert state_sequence == ['__start__', 'a', '__end__'] # Expected path
+
+    log_content = log_capture.get_logs() # Optionally keep log checks
+    assert "Condition matched for transition to a" in log_content # Verify condition log
 
 def test_run_method(monkeypatch):
     logger, log_capture = setup_test_logger('test_run_method')
@@ -230,6 +233,8 @@ def test_run_method(monkeypatch):
 
     engine = WFEngine.from_dot_string(dot_string, state_functions)
     engine.set_logger(logger)
-    engine.start() # start
-    log_content = log_capture.get_logs()
-    assert "Workflow completed successfully" in log_content
+    state_sequence = list(engine.start())
+    assert state_sequence == ['__start__', 'request_input', 'extract_n_check', 'ask_confirmation', 'process_data', '__end__'] # Full expected path
+
+    log_content = log_capture.get_logs() # Optionally keep log check
+    assert "Workflow completed successfully" in log_content # Verify workflow completion log
