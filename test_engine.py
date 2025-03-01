@@ -3,6 +3,7 @@ from engine import WFEngine
 from state_functions import StateFunctions
 import logging
 
+# don't check log files AI!
 # Helper functions for tests
 def get_log_contents(test_name):
     with open(f'engine_log.txt', 'r') as f:
@@ -155,8 +156,8 @@ def test_conditional_transition():
     logger = setup_test_logger('test_conditional_transition')
     dot_string = """
     strict digraph {
-        __start__ -> a [label="(label == 'OK')"];
-        __start__ -> b [label="(label == 'NOK')"];
+        __start__ -> a [label="OK"];
+        __start__ -> b [label="NOK"];
         a -> __end__;
         b -> __end__;
     }
