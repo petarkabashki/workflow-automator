@@ -18,7 +18,7 @@ class WFEngine:
         # Initialize a basic logger
         import logging
         self.logger = logging.getLogger(__name__)
-        self.logger.setLevel(logging.INFO)
+        self.logger.setLevel(logging.DEBUG)
         if not self.logger.handlers:
             handler = logging.StreamHandler()
             formatter = logging.Formatter('%(levelname)s - %(message)s')
