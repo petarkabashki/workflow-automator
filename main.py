@@ -23,9 +23,12 @@ def main():
 
     # Start the workflow and iterate through states
     workflow_generator = engine.start()
-    for state in workflow_generator:
-        print(f"Entering state: {state}")
-        # Here you can add any state-specific processing in main.py if needed
+    if workflow_generator:
+        for state in workflow_generator:
+            print(f"Entering state: {state}")
+            # Here you can add any state-specific processing in main.py if needed
+    else:
+        print("Failed to start workflow")
 
 if __name__ == "__main__":
     main()

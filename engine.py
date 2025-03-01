@@ -15,7 +15,15 @@ class WFEngine:
         self.transitions = transitions if transitions is not None else {}
         self.current_state = current_state
         self.state_functions = state_functions if state_functions is not None else {}
-        self.logger = None  # Initialize logger to None
+        # Initialize a basic logger
+        import logging
+        self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(logging.INFO)
+        if not self.logger.handlers:
+            handler = logging.StreamHandler()
+            formatter = logging.Formatter('%(levelname)s - %(message)s')
+            handler.setFormatter(formatter)
+            self.logger.addHandler(handler)
 
     def set_logger(self, logger):
         """Sets the logger for the engine."""
@@ -39,23 +47,22 @@ class WFEngine:
             return None, None
 
     def start(self):
-        """Starts the engine from the initial state."""
+        """Starts the engine from the initial state and returns a generator."""
         self.logger.debug("Starting engine")
 
         if not self.states:
             self.logger.warning("No states defined.")
-            return
+            return None
 
         # Find and set the initial state
         initial_state = self._find_initial_state()
         if initial_state:
             self.current_state = initial_state
             self.logger.debug(f"Initial state: {self.current_state}")
-            workflow_generator = self.run()  # Get the generator
-            for state in workflow_generator:    # Iterate through the generator
-                self.logger.debug(f"Generator yielded state: {state}") # Log each yielded state
+            return self.run()  # Return the generator
         else:
             self.logger.error("No valid initial state found.")
+            return None
 
     def _find_initial_state(self):
         """Determines the initial state of the workflow."""
@@ -165,34 +172,39 @@ class WFEngine:
     @staticmethod
     def from_dot_string(dot_string, state_functions):
         """Creates an WFEngine from a DOT string."""
-        parser = DotParser()
-        parser.parse(dot_string)
-        if not parser.nodes or not parser.edges:
-            raise ValueError("No graph could be created from DOT string. Check for parsing errors.")
+        try:
+            parser = DotParser()
+            parser.parse(dot_string)
+            if not parser.nodes or not parser.edges:
+                print("Error: No graph could be created from DOT string. Check for parsing errors.")
+                return None
 
-        # Extract node names from parser.nodes
-        nodes = [utils.strip_quotes(node['name']).strip() for node in parser.nodes]
-        
-        # Build transitions dictionary
-        transitions = {}
-        for edge in parser.edges:
-            source = utils.strip_quotes(edge['source']).strip()
-            destination = utils.strip_quotes(edge['destination']).strip()
-            label = edge.get('attributes', {}).get('label', '')  # Default to empty string if no label
+            # Extract node names from parser.nodes
+            nodes = [utils.strip_quotes(node['name']).strip() for node in parser.nodes]
             
-            if source not in transitions:
-                transitions[source] = []
+            # Build transitions dictionary
+            transitions = {}
+            for edge in parser.edges:
+                source = utils.strip_quotes(edge['source']).strip()
+                destination = utils.strip_quotes(edge['destination']).strip()
+                label = edge.get('attributes', {}).get('label', '')  # Default to empty string if no label
+                
+                if source not in transitions:
+                    transitions[source] = []
+                
+                # Extract condition from label if present
+                condition = ""
+                if label and "(" in label and ")" in label:
+                    parts = label.split("(", 1)
+                    if len(parts) > 1:
+                        condition = parts[1].rsplit(")", 1)[0].strip()
+                
+                transitions[source].append((destination, condition))
             
-            # Extract condition from label if present
-            condition = ""
-            if label and "(" in label and ")" in label:
-                parts = label.split("(", 1)
-                if len(parts) > 1:
-                    condition = parts[1].rsplit(")", 1)[0].strip()
-            
-            transitions[source].append((destination, condition))
-        
-        return WFEngine(nodes, transitions, None, state_functions)
+            return WFEngine(nodes, transitions, None, state_functions)
+        except Exception as e:
+            print(f"Error creating workflow engine: {e}")
+            return None
 
     @staticmethod
     def from_nodes_and_edges(nodes, edges, state_functions):
