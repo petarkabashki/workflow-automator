@@ -122,9 +122,14 @@ class WFEngine:
             self.logger.error("No current state to run from.")
             return
 
-        while self.current_state and self.current_state != "__end__":
+        while self.current_state:
             yield self.current_state  # Yield the current state name
             self.logger.debug(f"Current state: {self.current_state}") # Log after yielding
+            
+            # If we've reached the end state, break after yielding it
+            if self.current_state == "__end__":
+                self.logger.debug("Workflow completed successfully")
+                break
             
             # Run the current state function
             result, next_state = self._run_state(self.current_state)
@@ -180,9 +185,7 @@ class WFEngine:
                 self.logger.warning(f"No transitions defined from state: {self.current_state}")
                 break
 
-        if self.current_state == "__end__":
-            self.logger.debug("Workflow completed successfully")
-        else:
+        if self.current_state != "__end__":
             self.logger.warning("Workflow stopped without reaching end state")
 
     @staticmethod
