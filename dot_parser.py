@@ -1,6 +1,5 @@
 import re
 
-# comment out all print statements. AI!
 class DotParser:
     def __init__(self):
         self.nodes = []
@@ -11,7 +10,7 @@ class DotParser:
         dot_string = re.sub(r'/\*.*?\*/', '', dot_string, flags=re.DOTALL)
         dot_string = re.sub(r'//.*', '', dot_string)
         dot_string = dot_string.strip()
-        print(f"Parsing dot_string: '{dot_string}'")
+        # print(f"Parsing dot_string: '{dot_string}'")
 
         # Abort if unbalanced quotes.  This is less relevant now,
         # but still good to check for malformed input.
@@ -23,26 +22,26 @@ class DotParser:
         if graph_match:
             # Extract the content inside the graph declaration
             dot_string = graph_match.group(1).strip()
-            print(f"Extracted graph content: '{dot_string}'")
+            # print(f"Extracted graph content: '{dot_string}'")
 
         # Only parse edge connections.
         while dot_string:
             initial_length = len(dot_string)
             success, consumed, statement_text = self._parse_edge_connection(dot_string)
-            print(f"  Statement: '{statement_text}'")
-            print(f"  Success: {success}, Consumed: {consumed}")
+            # print(f"  Statement: '{statement_text}'")
+            # print(f"  Success: {success}, Consumed: {consumed}")
             if success:
                 dot_string = dot_string[consumed:].lstrip()
-                print(f"  Remaining dot_string: '{dot_string}'")
+                # print(f"  Remaining dot_string: '{dot_string}'")
                 if not statement_text.rstrip().endswith(';'):
                     dot_string = ""
             if not success or len(dot_string) == initial_length:
-                print("  Breaking loop")
+                # print("  Breaking loop")
                 break
-            print(f"  Nodes: {self.nodes}")
-            print(f"  Edges: {self.edges}")
-        print(f"Final Nodes: {self.nodes}")
-        print(f"Final Edges: {self.edges}")
+            # print(f"  Nodes: {self.nodes}")
+            # print(f"  Edges: {self.edges}")
+        # print(f"Final Nodes: {self.nodes}")
+        # print(f"Final Edges: {self.edges}")
 
 
     def _parse_edge_connection(self, text):
