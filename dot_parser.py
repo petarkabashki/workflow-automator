@@ -93,7 +93,7 @@ class DotTransformer(Transformer):
     
     def attr(self, items):
         key = str(items[0].value)
-        value = self._process_value(items[1])
+        value = str(items[1].value)  # Store as raw string
         return (key, value)
     
     def attr_list(self, items):
@@ -115,11 +115,8 @@ class DotTransformer(Transformer):
         target = items[1]
         attrs = items[2] if len(items) > 2 else {}
         
-        # Process attributes
+        # Store label as raw string if present
         label = attrs.get('label')
-        if label and (label.startswith('"') or label.startswith("'")):
-            # Remove quotes if present
-            label = label[1:-1]
         
         # Store data as raw string if present
         data = attrs.get('data')
@@ -166,13 +163,6 @@ class DotTransformer(Transformer):
     
     def value(self, items):
         return items[0].value
-    
-    def _process_value(self, value_token):
-        value = value_token.value
-        if isinstance(value, str) and (value.startswith('"') or value.startswith("'")):
-            # Remove quotes for string values
-            return value[1:-1]
-        return value
 
 # Example usage
 def parse_dot(dot_content):
