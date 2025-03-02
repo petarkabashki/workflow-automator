@@ -26,6 +26,9 @@ class Graph:
     directed: bool
     nodes: Dict[str, Node]
     edges: List[Edge]
+    
+    def __str__(self):
+        return f"Graph(strict={self.strict}, directed={self.directed}, nodes={list(self.nodes.keys())}, edges={len(self.edges)})"
 
 class DotParser:
     def __init__(self):
@@ -47,12 +50,10 @@ class DotParser:
         edge_stmt: node_id "->" node_id attr_list?
         
         attr_list: "[" attr ("," attr)* "]"
-        attr: ID "=" value
-        
-        value: STRING | ID
+        attr: ID "=" STRING
         
         ID: /[a-zA-Z_][a-zA-Z0-9_]*/
-        STRING: /"(?:[^"\\]|\\.)*"/ | /'(?:[^'\\]|\\.)*'/
+        STRING: /"(?:[^"\\]|\\.)*"/
         
         %import common.WS
         %ignore WS
@@ -93,7 +94,8 @@ class DotTransformer(Transformer):
     
     def attr(self, items):
         key = str(items[0].value)
-        value = str(items[1].value)  # Store as raw string
+        # Remove quotes from the string value
+        value = str(items[1].value)[1:-1]
         return (key, value)
     
     def attr_list(self, items):
@@ -115,10 +117,8 @@ class DotTransformer(Transformer):
         target = items[1]
         attrs = items[2] if len(items) > 2 else {}
         
-        # Store label as raw string if present
+        # Store label and data as raw strings if present
         label = attrs.get('label')
-        
-        # Store data as raw string if present
         data = attrs.get('data')
         
         edge = Edge(source=source, target=target, label=label, data=data)
@@ -160,9 +160,6 @@ class DotTransformer(Transformer):
     
     def start(self, items):
         return items[0]
-    
-    def value(self, items):
-        return items[0].value
 
 # Example usage
 def parse_dot(dot_content):
