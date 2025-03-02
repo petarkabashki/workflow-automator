@@ -1,6 +1,0 @@
-2025-03-02 05:00:08,101 - test_engine_interaction - DEBUG - Starting engine
-2025-03-02 05:00:08,102 - test_engine_interaction - DEBUG - Initial state: start
-2025-03-02 05:00:08,102 - test_engine_interaction - DEBUG - Starting engine run
-2025-03-02 05:00:08,102 - test_engine_interaction - DEBUG - Getting generator for state: start
-2025-03-02 05:00:08,102 - test_engine_interaction - ERROR - State function start is not a generator: 'tuple' object is not an iterator
-2025-03-02 05:00:08,102 - test_engine_interaction - ERROR - Failed to get generator for state: start
