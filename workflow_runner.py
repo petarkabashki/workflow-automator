@@ -18,15 +18,21 @@ class WorkflowRunner:
         yield ("node-enter", "__start__")
         yield ("transition", "request_input")
 
-# This method should yield a ('request_input', query) and receive the user input that way. Then it should put the received value in a context dict and pass it on with the next transition. The actual user input should be handled (via terminal) by the runner function using the yielded query. AI!
     def request_input(self):
-        yield (f"request_input_init", f"Data from request_input")
-        instruction, context = yield ("ready", f"Waiting in request_input")
-        print(f"request_input received: {instruction}, {context}")
-        if context == "transition_from_node":
-            yield ("node_transition", "next_node")  # Example of node-initiated transition
-        yield ("node-enter", "request_input")
-        yield ("transition", "extract_n_check")
+        # Yield the request_input instruction with the query
+        yield ("request_input", "Please provide your name and email")
+        # Get the user input
+        user_input = yield ("get_input", None)
+        # Create context dict with user input
+        context = {"user_input": user_input}
+        
+        print(f"request_input received input: {user_input}")
+        if user_input.lower() == "quit":
+            yield ("node-enter", "request_input")
+            yield ("transition", "__end__")
+        else:
+            yield ("node-enter", "request_input")
+            yield ("transition", "extract_n_check", context)
 
     def extract_n_check(self):
         yield (f"extract_n_check_init", f"Data from extract_n_check")
