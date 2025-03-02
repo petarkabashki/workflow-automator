@@ -1,151 +1,231 @@
-import re
+from lark import Lark, Transformer, v_args
 import json
-from utils import strip_quotes, parse_json_attribute
+from dataclasses import dataclass
+from typing import Dict, List, Optional, Set, Any
+
+@dataclass
+class Node:
+    id: str
+    data: Optional[Dict] = None
+    
+    def __str__(self):
+        return f"Node({self.id}, data={self.data})"
+
+@dataclass
+class Edge:
+    source: str
+    target: str
+    label: Optional[str] = None
+    data: Optional[Dict] = None
+    
+    def __str__(self):
+        return f"Edge({self.source} -> {self.target}, label={self.label}, data={self.data})"
+
+@dataclass
+class Graph:
+    strict: bool
+    directed: bool
+    nodes: Dict[str, Node]
+    edges: List[Edge]
 
 class DotParser:
     def __init__(self):
-        self.nodes = []
-        self.edges = []
-
-    def parse(self, dot_string):
-        # Remove multi-line and single-line comments.
-        dot_string = re.sub(r'/\*.*?\*/', '', dot_string, flags=re.DOTALL)
-        dot_string = re.sub(r'//.*', '', dot_string)
-        dot_string = dot_string.strip()
-        # print(f"Parsing dot_string: '{dot_string}'")
-
-        # Abort if unbalanced quotes.  This is less relevant now,
-        # but still good to check for malformed input.
-        if dot_string.count('"') % 2 != 0:
-            return
-
-        # Handle 'strict digraph {}' wrapper
-        graph_match = re.match(r'strict\s+digraph\s*{(.*)}', dot_string, re.DOTALL)
-        if graph_match:
-            # Extract the content inside the graph declaration
-            dot_string = graph_match.group(1).strip()
-            # print(f"Extracted graph content: '{dot_string}'")
-
-        # Parse edge connections and node definitions.
-        while dot_string:
-            initial_length = len(dot_string)
-            
-            # Try to parse as edge connection first, then as node definition
-            edge_result = self._parse_edge_connection(dot_string)
-            if edge_result[0]:  # If edge parsing succeeded
-                success, consumed, statement_text = edge_result
-            else:  # Try node definition
-                success, consumed, statement_text = self._parse_node_definition(dot_string)
-                
-            # print(f"  Statement: '{statement_text}'")
-            # print(f"  Success: {success}, Consumed: {consumed}")
-            if success:
-                dot_string = dot_string[consumed:].lstrip()
-                # print(f"  Remaining dot_string: '{dot_string}'")
-                if not statement_text.rstrip().endswith(';'):
-                    dot_string = ""
-            if not success or len(dot_string) == initial_length:
-                # print("  Breaking loop")
-                break
-            # print(f"  Nodes: {self.nodes}")
-            # print(f"  Edges: {self.edges}")
-        # print(f"Final Nodes: {self.nodes}")
-        # print(f"Final Edges: {self.edges}")
-
-
-    def _parse_edge_connection(self, text):
-        # Edge connection with attributes: e.g. "Start" -> "End" [label = "OK", data = '{"key": "value"}'];
-        #  or Start -> End [label = "OK"];
-        pattern_with_attributes = (
-            r'^(?P<source>"[^"]+"|[^"\s;-]+)\s*->\s*(?P<destination>"[^"]+"|[^"\s;-]+)\s*'
-            r'(?:\[\s*(?P<attributes>[^]]*)\s*\])?\s*;?'
-        )
-
-        m = re.match(pattern_with_attributes, text)
-        if m:
-            statement_text = m.group(0)
-            source = m.group('source')
-            destination = m.group('destination')
-            # Remove quotes if present
-            if source.startswith('"') and source.endswith('"'):
-                source = source[1:-1]
-            if destination.startswith('"') and destination.endswith('"'):
-                destination = destination[1:-1]
-
-            attributes_text = m.group('attributes')  # Can be None
-
-            self._ensure_node_exists(source)
-            self._ensure_node_exists(destination)
-
-            edge = {'source': source, 'destination': destination, 'connector': '->'}
-            
-            if attributes_text:
-                edge['attributes'] = self._parse_attributes(attributes_text)
-                
-            self.edges.append(edge)
-            return (True, m.end(), statement_text)
-        return (False, 0, "")
-
-    def _parse_node_definition(self, text):
-        """Parse node definition statements, e.g., 'node_name [attribute="value"];'."""
-        node_pattern = (
-            r'^(?P<name>"[^"]+"|[^"\s;-]+)\s*'
-            r'(?:\[\s*(?P<attributes>[^]]*)\s*\])?\s*;?'
-        )
-        m = re.match(node_pattern, text)
-        if m:
-            statement_text = m.group(0)
-            node_name = m.group('name')
-            # Remove quotes if present
-            if node_name.startswith('"') and node_name.endswith('"'):
-                node_name = node_name[1:-1]
-
-            attributes_text = m.group('attributes')  # Can be None
-
-            # Get existing or create new node
-            node = None
-            for n in self.nodes:
-                if n.get('name') == node_name.strip():
-                    node = n
-                    break
-            
-            if node is None:
-                node = {'name': node_name.strip(), 'label': node_name.strip()}
-                self.nodes.append(node)
-
-            if attributes_text:
-                node['attributes'] = self._parse_attributes(attributes_text)
-            elif 'attributes' not in node:  # Ensure attributes key exists even if no attributes are defined in this statement
-                node['attributes'] = {}
-            
-            return (True, m.end(), statement_text)
-
-        return (False, 0, "")
-
-    def _ensure_node_exists(self, name):
-        name = name.strip()
-        for node in self.nodes:
-            if node.get('name') == name:
-                return node
+        # Define the grammar for the subset of DOT language
+        self.grammar = r"""
+        start: graph
         
-        # Node doesn't exist, create it
-        node = {'name': name, 'label': name}
-        self.nodes.append(node)
+        graph: strict? graph_type "{" stmt_list "}"
+        strict: "strict"
+        graph_type: "digraph"
+        
+        stmt_list: [stmt [";" stmt]*]
+        stmt: node_stmt | edge_stmt
+        
+        node_stmt: node_id [attr_list]
+        node_id: ID
+        
+        edge_stmt: node_id "->" node_id [attr_list]
+        
+        attr_list: "[" attr ["," attr]* "]"
+        attr: ID "=" value
+        
+        value: STRING | ID
+        
+        ID: /[a-zA-Z_][a-zA-Z0-9_]*/
+        STRING: /"(?:[^"\\]|\\.)*"/ | /'(?:[^'\\]|\\.)*'/
+        
+        %import common.WS
+        %ignore WS
+        """
+        
+        self.parser = Lark(self.grammar, parser='lalr', transformer=DotTransformer())
+    
+    def parse(self, dot_content: str) -> Graph:
+        """Parse DOT language content and return a Graph object."""
+        try:
+            return self.parser.parse(dot_content)
+        except Exception as e:
+            raise ValueError(f"Failed to parse DOT content: {e}")
+
+class DotTransformer(Transformer):
+    def __init__(self):
+        super().__init__()
+        self.nodes = {}
+        self.edges = []
+        self.strict = False
+        self.directed = False
+    
+    @v_args(inline=True)
+    def strict(self, _):
+        self.strict = True
+        return True
+    
+    @v_args(inline=True)
+    def graph_type(self, graph_type):
+        self.directed = graph_type.value == "digraph"
+        return self.directed
+    
+    def node_id(self, items):
+        return str(items[0].value)
+    
+    def attr(self, items):
+        key = str(items[0].value)
+        value = self._process_value(items[1])
+        return (key, value)
+    
+    def attr_list(self, items):
+        return dict(items)
+    
+    def node_stmt(self, items):
+        node_id = items[0]
+        attrs = items[1] if len(items) > 1 else {}
+        
+        # Process data attribute if present
+        data = None
+        if 'data' in attrs:
+            try:
+                data = self._parse_data(attrs['data'])
+            except json.JSONDecodeError:
+                raise ValueError(f"Invalid JSON in data attribute: {attrs['data']}")
+        
+        node = Node(id=node_id, data=data)
+        self.nodes[node_id] = node
         return node
+    
+    def edge_stmt(self, items):
+        source = items[0]
+        target = items[1]
+        attrs = items[2] if len(items) > 2 else {}
+        
+        # Process attributes
+        label = attrs.get('label')
+        if label and (label.startswith('"') or label.startswith("'")):
+            # Remove quotes if present
+            label = label[1:-1]
+        
+        # Process data attribute if present
+        data = None
+        if 'data' in attrs:
+            try:
+                data = self._parse_data(attrs['data'])
+            except json.JSONDecodeError:
+                raise ValueError(f"Invalid JSON in data attribute: {attrs['data']}")
+        
+        edge = Edge(source=source, target=target, label=label, data=data)
+        self.edges.append(edge)
+        return edge
+    
+    def stmt(self, items):
+        return items[0]
+    
+    def stmt_list(self, items):
+        return items
+    
+    def graph(self, items):
+        # Process strict flag if present
+        i = 0
+        if items and isinstance(items[0], bool):
+            self.strict = items[0]
+            i += 1
+        
+        # Process directed flag
+        if i < len(items) and isinstance(items[i], bool):
+            self.directed = items[i]
+            i += 1
+        
+        # Skip the opening and closing braces in our grammar
+        return Graph(
+            strict=self.strict,
+            directed=self.directed,
+            nodes=self.nodes,
+            edges=self.edges
+        )
+    
+    def start(self, items):
+        return items[0]
+    
+    def value(self, items):
+        return items[0].value
+    
+    def _process_value(self, value_token):
+        value = value_token.value
+        if isinstance(value, str) and (value.startswith('"') or value.startswith("'")):
+            # Remove quotes for string values
+            return value[1:-1]
+        return value
+    
+    def _parse_data(self, data_str):
+        # Handle the case where data is a JSON string
+        if isinstance(data_str, str):
+            # Remove quotes if they exist
+            if (data_str.startswith('"') and data_str.endswith('"')) or \
+               (data_str.startswith("'") and data_str.endswith("'")):
+                data_str = data_str[1:-1]
+                
+            # Sometimes JSON uses single quotes instead of double quotes
+            data_str = data_str.replace("'", '"')
             
-    def _parse_attributes(self, attributes_text):
-        """Parse attribute string into a dictionary of attributes."""
-        attributes = {}
-        if not attributes_text:
-            return attributes
+            return json.loads(data_str)
+        return data_str
 
-        # Regex to find key-value pairs, handles quoted values and JSON-like values
-        attribute_regex = r'(\w+)\s*=\s*("([^"]*)"|\'([^\']*)\'|{.*?}|\[.*?\]|[^,\s]+)'
-        matches = re.findall(attribute_regex, attributes_text)
+# Example usage
+def parse_dot(dot_content):
+    parser = DotParser()
+    graph = parser.parse(dot_content)
+    return graph
 
-        for match in matches:
-            key = match[0]
-            value_text = match[1]  # This will include quotes if they are present in the attribute string
-            value = parse_json_attribute(value_text)  # parse_json_attribute will handle stripping quotes and parsing JSON
-            attributes[key] = value
-        return attributes
+# Pretty printing functions
+def print_graph(graph):
+    print(f"Graph: strict={graph.strict}, directed={graph.directed}")
+    print("\nNodes:")
+    for node_id, node in graph.nodes.items():
+        print(f"  {node}")
+    
+    print("\nEdges:")
+    for edge in graph.edges:
+        print(f"  {edge}")
+
+# Test with the provided example
+if __name__ == "__main__":
+    dot_example = '''
+    strict digraph {
+        __start__[data="{m: 1, n: 2}"]
+        __start__ -> request_input;
+        request_input -> extract_n_check[label="OK (Name and email provided)", data="{m: 1, n: 2}"];
+        request_input -> request_input[label="NOK (Missing name or email)"];
+        request_input -> __end__[label="QUIT"];
+
+        extract_n_check -> request_input[label="NOK (Data missing)"];
+        extract_n_check -> ask_confirmation[label="OK (Data extracted)"];
+        ask_confirmation -> process_data[label="Y (Confirmed)"];
+        ask_confirmation -> request_input[label="N (Not confirmed)"];
+        ask_confirmation -> __end__[label="Q (Quit)"];
+        process_data -> __end__;
+    }
+    '''
+    
+    try:
+        graph = parse_dot(dot_example)
+        print_graph(graph)
+    except Exception as e:
+        print(f"Error parsing DOT: {e}")
