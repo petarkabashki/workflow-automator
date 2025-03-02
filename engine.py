@@ -11,6 +11,7 @@ class Engine:
 
     def __init__(self, states=None, transitions=None, current_state=None, state_functions=None):
         # Initialize states and transitions (handling None values)
+        # Remove usage of local states and transitions lists, as those are handled externally AI!
         self.states = states if states is not None else []
         self.transitions = transitions if transitions is not None else {}
         self.current_state = current_state
@@ -86,39 +87,6 @@ class Engine:
             return initial_states[0]  # Return the first potential initial state
         else:
             return initial_states[0]  # Single initial state
-
-    def evaluate_condition(self, result, condition):
-        """
-        Evaluates a condition based on the result from the state function.
-        Compares the result with the condition in the transition.
-        """
-        self.logger.debug(f"Evaluating condition: result='{result}' against condition='{condition}'")
-        self.logger.debug(f"evaluate_condition: result type={type(result)}, condition type={type(condition)}")
-
-        if not condition:
-            return True  # If no condition is defined, consider it True
-        
-        # Handle the case where result is a tuple
-        if isinstance(result, tuple):
-            result = result[0]
-
-        # For simple conditions, just check if the result matches the condition
-        if "==" in condition:
-            # Parse condition like "label == 'OK'"
-            parts = condition.split("==", 1)
-            if len(parts) == 2:
-                left = parts[0].strip()
-                right = parts[1].strip()
-                
-                # Remove quotes if present
-                right = utils.strip_quotes(right)
-                
-                # If left side is "label", compare with result
-                if left == "label":
-                    return str(result) == str(right)
-        
-        # For direct comparison (no "=="), just check if result matches condition
-        return result == condition
 
     def run(self):
         """
