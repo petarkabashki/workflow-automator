@@ -134,26 +134,19 @@ class DotParser:
     def _parse_attributes(self, attributes_text):
         """Parse attribute string into a dictionary of attributes."""
         attributes = {}
-        # Match attribute name-value pairs: name = "value" or name = 'value'
-        attr_pattern = r'(\w+)\s*=\s*(?:"([^"]*)"|\'([^\']*)\')(?:,\s*|$)'
-        
-        for match in re.finditer(attr_pattern, attributes_text):
-            attr_name = match.group(1)
-            # Value is either in group 2 (double quotes) or group 3 (single quotes)
-            attr_value = match.group(2) if match.group(2) is not None else match.group(3)
-            
-            # Try to parse JSON if the value is enclosed in single quotes
-            if match.group(3) is not None:
-                try:
-                    # Attempt to parse as JSON
-                    json_value = json.loads(attr_value)
-                    attributes[attr_name] = json_value
-                    continue
-                except json.JSONDecodeError:
-                    # If JSON parsing fails, use the string value
-                    pass
-            
-            # Default case: use the string value
-            attributes[attr_name] = attr_value
-            
+        if attributes_text:
+            for attr_pair in attributes_text.split(','):
+                if '=' in attr_pair:
+                    key, value = attr_pair.split('=', 1)
+                    key = key.strip()
+                    value_str = strip_quotes(value.strip())  # Use existing strip_quotes
+                    if value_str.startswith('{') and value_str.endswith('}'):
+                        # Try to parse JSON if value looks like JSON
+                        try:
+                            value = json.loads(value_str)
+                        except json.JSONDecodeError:
+                            value = value_str  # Fallback to string if JSON parsing fails
+                    else:
+                        value = value_str
+                    attributes[key] = value
         return attributes
