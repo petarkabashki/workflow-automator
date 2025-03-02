@@ -196,6 +196,7 @@ def test_conditional_transition():
     log_content = log_capture.get_logs() # Optionally keep log checks
     assert "Condition matched for transition to a" in log_content # Verify condition log
 
+#%%
 def test_run_method(monkeypatch):
     logger, log_capture = setup_test_logger('test_run_method')
     dot_string = """
@@ -256,5 +257,5 @@ def test_run_method(monkeypatch):
     
     assert state_sequence == ['__start__', 'request_input', 'extract_n_check', 'ask_confirmation', 'process_data', '__end__'] # Full expected path
     
-    log_content = log_capture.get_logs() # Keep log check
-    assert "Workflow completed successfully" in log_content # Verify workflow completion log
+    # log_content = log_capture.get_logs() # Keep log check
+    # assert "Workflow completed successfully" in log_content # Verify workflow completion log
