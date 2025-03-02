@@ -136,13 +136,16 @@ class DotParser:
     def _parse_attributes(self, attributes_text):
         """Parse attribute string into a dictionary of attributes."""
         attributes = {}
-        if attributes_text:
-            for attr_pair in attributes_text.split(','):
-                if '=' in attr_pair:
-                    key, value = attr_pair.split('=', 1)
-                    key = key.strip()
-                    value_text = value.strip()  # Just strip whitespace
-                    # Use our utility function to parse JSON attributes
-                    value = parse_json_attribute(value_text)
-                    attributes[key] = value
+        if not attributes_text:
+            return attributes
+
+        # Regex to find key-value pairs, handles quoted values and JSON-like values
+        attribute_regex = r'(\w+)\s*=\s*("([^"]*)"|\'([^\']*)\'|{.*?}|\[.*?\]|[^,\s]+)'
+        matches = re.findall(attribute_regex, attributes_text)
+
+        for match in matches:
+            key = match[0]
+            value_text = match[1]  # This will include quotes if they are present in the attribute string
+            value = parse_json_attribute(value_text)  # parse_json_attribute will handle stripping quotes and parsing JSON
+            attributes[key] = value
         return attributes
