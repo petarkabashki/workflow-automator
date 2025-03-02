@@ -145,7 +145,9 @@ class DotParser:
                     if value_str.startswith('{') and value_str.endswith('}'):
                         # Try to parse JSON if value looks like JSON
                         try:
-                            value = json.loads(value_str)
+                            # Replace single quotes with double quotes for valid JSON
+                            json_string = value_str.replace("'", '"')
+                            value = json.loads(json_string)
                         except json.JSONDecodeError:
                             value = value_str  # Fallback to string if JSON parsing fails
                     else:
