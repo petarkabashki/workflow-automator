@@ -110,6 +110,16 @@ def test_edge_without_label():
     assert len(parser.edges) == 1
     assert 'attributes' not in parser.edges[0]
 
+# Test edge without label and no attributes key
+def test_edge_without_label_no_attributes():
+    parser = DotParser()
+    dot_string = 'process_data -> __end__;'
+    parser.parse(dot_string)
+    assert len(parser.edges) == 1
+    assert parser.edges[0]['source'] == "process_data"
+    assert parser.edges[0]['destination'] == "__end__"
+    assert 'attributes' not in parser.edges[0] # Verify no attributes key is present
+
 # Test incorrect keyword
 def test_incorrect_keyword():
     parser = DotParser()
