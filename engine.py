@@ -2,7 +2,7 @@ from dot_parser import DotParser
 import utils
 
 # Workflow engine implementation as a generator
-class WFEngine:
+class Engine:
     """
     The WFEngine class manages state transitions and state method invocations.
     It supports conditional transitions, state-specific methods,
@@ -29,22 +29,24 @@ class WFEngine:
         """Sets the logger for the engine."""
         self.logger = logger
 
-    def _run_state(self, state_name):
+    def _run_state(self, state_name, arg=None):
         """Runs the method associated with the given state."""
         self.logger.debug(f"Running state: {state_name}")
+        print(f"DEBUG: _run_state - self.state_functions: {self.state_functions}")
+        print(f"DEBUG: _run_state - state_name: {state_name}")
 
         # Check if the state function exists as a method in the StateFunctions instance
         if not hasattr(self.state_functions, state_name):
             self.logger.error(f"No function found for state: {state_name}")
-            return None, None  # No function associated with the state
+            return None  # No function associated with the state
 
         func = getattr(self.state_functions, state_name)
         try:
-            result, next_state = func()
-            return result, next_state
+            result = func(arg)
+            return result
         except Exception as e:
             self.logger.error(f"Error in state function {state_name}: {e}")
-            return None, None
+            return None
 
     def start(self):
         """Starts the engine from the initial state and returns a generator."""
@@ -94,6 +96,10 @@ class WFEngine:
 
         if not condition:
             return True  # If no condition is defined, consider it True
+        
+        # Handle the case where result is a tuple
+        if isinstance(result, tuple):
+            result = result[0]
 
         # For simple conditions, just check if the result matches the condition
         if "==" in condition:
@@ -123,67 +129,27 @@ class WFEngine:
             return
 
         while self.current_state:
-            yield ("state_change", self.current_state)  # Yield state change event
-            self.logger.debug(f"Current state: {self.current_state}") # Log after yielding
-            
+            # Always yield the state change
+            yield ("state_change", self.current_state)
+            self.logger.debug(f"Current state: {self.current_state}")
+
             # If we've reached the end state, break after yielding it
             if self.current_state == "__end__":
                 self.logger.debug("Workflow completed successfully")
                 break
-            
-            # Run the current state function
-            result, next_state = self._run_state(self.current_state)
-            
-            # Log the result of the state function
-            self.logger.debug(f"State function for {self.current_state} returned: result='{result}', next_state='{next_state}'")
-            
-            # If the state function specified the next state directly, use it
-            if next_state:
-                self.logger.debug(f"State function returned next state: {next_state}")
-                self.current_state = next_state
-                continue
-            else:
-                self.logger.debug(f"State function did not return next state, checking transitions.")
-            
-            # Otherwise, check transitions from the current state
-            if self.current_state in self.transitions:
-                possible_transitions = self.transitions[self.current_state]
-                
-                if len(possible_transitions) == 1:
-                    # If only one transition, take it
-                    next_state, condition = possible_transitions[0]
-                    self.logger.debug(f"Taking only available transition to: {next_state}")
-                    self.current_state = next_state
-                elif len(possible_transitions) > 1:
-                    # Multiple transitions - need to evaluate conditions
-                    self.logger.debug(f"Multiple transitions available from {self.current_state}")
-                    
-                    # Check if all transitions have empty conditions
-                    if all(not cond for _, cond in possible_transitions):
-                        self.logger.error("Multiple transitions require conditions")
-                        break
-                    
-                    # Try to find a transition that matches the result
-                    matched = False
-                    for dest, condition in possible_transitions:
-                        if self.evaluate_condition(result, condition):
-                            self.logger.debug(f"Condition matched for transition to {dest}")
-                            self.current_state = dest
-                            matched = True
-                            break
-                    
-                    if not matched:
-                        # No matching transition found
-                        self.logger.warning(f"No matching transition found for result: {result}")
-                        break
-                else:
-                    # No transitions defined
-                    self.logger.warning(f"No transitions defined from state: {self.current_state}")
-                    break
-            else:
-                # No transitions from current state
-                self.logger.warning(f"No transitions defined from state: {self.current_state}")
-                break
+
+            # Run the current state, passing any received value
+            arg = None
+            while True:
+                result = self._run_state(self.current_state, arg)
+                self.logger.debug(f"State function for {self.current_state} returned: result='{result}'")
+                arg = yield result  # Yield the result and receive a potential argument
+
+                # Check for state_change tuple
+                if isinstance(result, tuple) and len(result) == 2 and result[0] == 'state_change':
+                    self.logger.debug(f"State change requested: {result[1]}")
+                    self.current_state = result[1]
+                    break  # Exit inner loop to transition to the new state
 
         if self.current_state != "__end__":
             self.logger.warning("Workflow stopped without reaching end state")
@@ -207,6 +173,7 @@ class WFEngine:
                 source = utils.strip_quotes(edge['source']).strip()
                 destination = utils.strip_quotes(edge['target']).strip()
                 label = edge.get('label', '')  # Default to empty string if no label
+                print(f"DEBUG: Edge - source: {source}, destination: {destination}, label: {label}")
 
                 if source not in transitions:
                     transitions[source] = []
@@ -221,6 +188,9 @@ class WFEngine:
 
                 transitions[source].append((destination, condition))
 
+            print(f"DEBUG: from_dot_string - nodes: {nodes}")
+            print(f"DEBUG: from_dot_string - transitions: {transitions}")
+            print(f"DEBUG: from_dot_string - state_functions: {state_functions}")
             return WFEngine(nodes, transitions, None, state_functions)
         except Exception as e:
             print(f"Error creating workflow engine: {e}")
@@ -261,4 +231,3 @@ class WFEngine:
             print("Graphviz is not installed. Please install it to render the graph.")
         except Exception as e:
             print(f"An error occurred while rendering the graph: {e}")
-
