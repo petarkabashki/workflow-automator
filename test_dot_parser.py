@@ -91,7 +91,7 @@ class TestDotParser(unittest.TestCase):
         self.assertEqual(len(graph.nodes), 1)
         self.assertIn('Node1', graph.nodes)
         node = graph.nodes['Node1']
-        self.assertEqual(node.data, {"key": "value"})
+        self.assertEqual(node.data, "{\"key\": \"value\"}")
     
     def test_edge_with_json_data(self):
         """Test edge with JSON data attribute."""
@@ -104,7 +104,7 @@ class TestDotParser(unittest.TestCase):
         
         self.assertEqual(len(graph.edges), 1)
         edge = graph.edges[0]
-        self.assertEqual(edge.data, {"key": "value", "number": 123})
+        self.assertEqual(edge.data, "{\"key\": \"value\", \"number\": 123}")
     
     def test_invalid_json_data(self):
         """Test handling of invalid JSON in data attributes."""
@@ -113,8 +113,9 @@ class TestDotParser(unittest.TestCase):
             node1[data="{invalid json}"]
         }
         '''
-        with self.assertRaises(ValueError):
-            self.parser.parse(dot_string)
+        # This should now pass since we're not parsing JSON
+        graph = self.parser.parse(dot_string)
+        self.assertEqual(graph.nodes['node1'].data, "{invalid json}")
     
     def test_parse_simple_graph(self):
         """Test parsing a simple graph with a single node and edge."""
@@ -132,7 +133,7 @@ class TestDotParser(unittest.TestCase):
         # Check node1 data
         node1 = graph.nodes['node1']
         self.assertEqual(node1.id, 'node1')
-        self.assertEqual(node1.data, {"key": "value"})
+        self.assertEqual(node1.data, "{\"key\": \"value\"}")
         
         # Check edges
         self.assertEqual(len(graph.edges), 1)
@@ -140,7 +141,7 @@ class TestDotParser(unittest.TestCase):
         self.assertEqual(edge.source, 'node1')
         self.assertEqual(edge.target, 'node2')
         self.assertEqual(edge.label, 'connection')
-        self.assertEqual(edge.data, {"weight": 5})
+        self.assertEqual(edge.data, "{\"weight\": 5}")
     
     def test_parse_complex_graph(self):
         """Test parsing a more complex graph with multiple nodes and edges."""
@@ -158,7 +159,7 @@ class TestDotParser(unittest.TestCase):
         
         # Check __start__ node data
         start_node = graph.nodes['__start__']
-        self.assertEqual(start_node.data, {"m": 1, "n": 2})
+        self.assertEqual(start_node.data, "{m: 1, n: 2}")
         
         # Check edges
         self.assertEqual(len(graph.edges), 9)  # Correct number of edges
@@ -170,7 +171,7 @@ class TestDotParser(unittest.TestCase):
                 edge.target == 'extract_n_check' and 
                 edge.label == 'OK (Name and email provided)'):
                 edge_found = True
-                self.assertEqual(edge.data, {"m": 1, "n": 2})  # Now expecting a parsed dict
+                self.assertEqual(edge.data, "{m: 1, n: 2}")  # Now expecting a raw string
                 break
         self.assertTrue(edge_found, "Expected edge not found")
     
@@ -184,14 +185,14 @@ class TestDotParser(unittest.TestCase):
     def test_node_str_representation(self):
         """Test the string representation of Node objects."""
         # This test doesn't need the parser
-        node = Node(id="test_node", data={"key": "value"})
-        self.assertEqual(str(node), "Node(test_node, data={'key': 'value'})")
+        node = Node(id="test_node", data="{\"key\": \"value\"}")
+        self.assertEqual(str(node), "Node(test_node, data={\"key\": \"value\"})")
     
     def test_edge_str_representation(self):
         """Test the string representation of Edge objects."""
         # This test doesn't need the parser
-        edge = Edge(source="src", target="dst", label="test", data={"weight": 5})
-        self.assertEqual(str(edge), "Edge(src -> dst, label=test, data={'weight': 5})")
+        edge = Edge(source="src", target="dst", label="test", data="{\"weight\": 5}")
+        self.assertEqual(str(edge), "Edge(src -> dst, label=test, data={\"weight\": 5})")
     
     def test_graph_str_representation(self):
         """Test the string representation of Graph objects."""
@@ -210,7 +211,7 @@ class TestDotParser(unittest.TestCase):
         
         self.assertEqual(len(graph.nodes), 1)
         node = graph.nodes['Node1']
-        self.assertEqual(node.data, {"key": "value", "num": 42, "bool": True})
+        self.assertEqual(node.data, "{key: 'value', num: 42, bool: true}")
 
 if __name__ == '__main__':
     unittest.main()

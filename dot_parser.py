@@ -1,12 +1,11 @@
 from lark import Lark, Transformer, v_args
-import json
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Set, Any
 
 @dataclass
 class Node:
     id: str
-    data: Optional[Dict] = None
+    data: Optional[str] = None
     
     def __str__(self):
         return f"Node({self.id}, data={self.data})"
@@ -16,7 +15,7 @@ class Edge:
     source: str
     target: str
     label: Optional[str] = None
-    data: Optional[Dict] = None
+    data: Optional[str] = None
     
     def __str__(self):
         return f"Edge({self.source} -> {self.target}, label={self.label}, data={self.data})"
@@ -104,13 +103,8 @@ class DotTransformer(Transformer):
         node_id = items[0]
         attrs = items[1] if len(items) > 1 else {}
         
-        # Process data attribute if present
-        data = None
-        if 'data' in attrs:
-            try:
-                data = self._parse_data(attrs['data'])
-            except json.JSONDecodeError:
-                raise ValueError(f"Invalid JSON in data attribute: {attrs['data']}")
+        # Store data as raw string if present
+        data = attrs.get('data')
         
         node = Node(id=node_id, data=data)
         self.nodes[node_id] = node
@@ -127,14 +121,8 @@ class DotTransformer(Transformer):
             # Remove quotes if present
             label = label[1:-1]
         
-        # Process data attribute if present
-        data = None
-        if 'data' in attrs:
-            try:
-                data = self._parse_data(attrs['data'])
-            except json.JSONDecodeError:
-                # If it's not valid JSON, keep the original string
-                data = attrs['data']
+        # Store data as raw string if present
+        data = attrs.get('data')
         
         edge = Edge(source=source, target=target, label=label, data=data)
         self.edges.append(edge)
@@ -185,60 +173,6 @@ class DotTransformer(Transformer):
             # Remove quotes for string values
             return value[1:-1]
         return value
-    
-    def _parse_data(self, data_str):
-        # Handle the case where data is a JSON string
-        if isinstance(data_str, str):
-            # Remove quotes if they exist
-            if (data_str.startswith('"') and data_str.endswith('"')) or \
-               (data_str.startswith("'") and data_str.endswith("'")):
-                data_str = data_str[1:-1]
-                
-            # Try to parse as JSON
-            try:
-                # Sometimes JSON uses single quotes instead of double quotes
-                data_str_fixed = data_str.replace("'", '"')
-                return json.loads(data_str_fixed)
-            except json.JSONDecodeError:
-                # If it's not valid JSON but has a format like {m: 1, n: 2}
-                # Try to convert it to proper JSON
-                if data_str.strip().startswith('{') and data_str.strip().endswith('}'):
-                    try:
-                        # Convert JavaScript-style object to Python dict
-                        # This is a simple implementation that handles basic cases
-                        content = data_str.strip()[1:-1]  # Remove { }
-                        pairs = [pair.strip() for pair in content.split(',')]
-                        result = {}
-                        for pair in pairs:
-                            if ':' in pair:
-                                key, value = [p.strip() for p in pair.split(':', 1)]
-                                # Remove quotes from key if present
-                                if (key.startswith('"') and key.endswith('"')) or \
-                                   (key.startswith("'") and key.endswith("'")):
-                                    key = key[1:-1]
-                                
-                                # Try to convert value to appropriate type
-                                try:
-                                    if value.isdigit():
-                                        value = int(value)
-                                    elif value.replace('.', '', 1).isdigit():
-                                        value = float(value)
-                                    elif value.lower() == 'true':
-                                        value = True
-                                    elif value.lower() == 'false':
-                                        value = False
-                                    elif value.lower() == 'null':
-                                        value = None
-                                except:
-                                    pass  # Keep as string if conversion fails
-                                
-                                result[key] = value
-                        return result
-                    except:
-                        # If parsing fails, return the original string
-                        return data_str
-                return data_str
-        return data_str
 
 # Example usage
 def parse_dot(dot_content):
