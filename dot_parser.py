@@ -1,182 +1,108 @@
-from lark import Lark, Transformer, v_args
-from dataclasses import dataclass
-from typing import Dict, List, Optional, Set, Any
-
-@dataclass
-class Node:
-    id: str
-    data: Optional[str] = None
-    
-    def __str__(self):
-        return f"Node({self.id}, data={self.data})"
-
-@dataclass
-class Edge:
-    source: str
-    target: str
-    label: Optional[str] = None
-    data: Optional[str] = None
-    
-    def __str__(self):
-        return f"Edge({self.source} -> {self.target}, label={self.label}, data={self.data})"
-
-@dataclass
-class Graph:
-    strict: bool
-    directed: bool
-    nodes: Dict[str, Node]
-    edges: List[Edge]
-    
-    def __str__(self):
-        return f"Graph(strict={self.strict}, directed={self.directed}, nodes={list(self.nodes.keys())}, edges={len(self.edges)})"
+import re
+from typing import Dict, List, Optional, Any
 
 class DotParser:
-    def __init__(self):
-        # Define the grammar for the subset of DOT language
-        self.grammar = r"""
-        start: graph
-        
-        graph: strict? graph_type "{" stmt_list "}"
-        strict: "strict"
-        graph_type: "digraph"
-        
-        stmt_list: stmt (";" stmt)* ";"?
-                 | 
-        stmt: node_stmt | edge_stmt
-        
-        node_stmt: node_id attr_list?
-        node_id: ID
-        
-        edge_stmt: node_id "->" node_id attr_list?
-        
-        attr_list: "[" attr ("," attr)* "]"
-        attr: ID "=" STRING
-        
-        ID: /[a-zA-Z_][a-zA-Z0-9_]*/
-        STRING: /"(?:[^"\\]|\\.)*"/
-        
-        %import common.WS
-        %ignore WS
-        """
-        
-        self.parser = Lark(self.grammar, parser='lalr', transformer=DotTransformer())
-    
-    def parse(self, dot_content: str) -> Graph:
-        """Parse DOT language content and return a Graph object."""
-        if not dot_content.strip():
-            raise ValueError("Empty DOT content")
+    def parse(self, dot_content: str) -> Dict[str, Any]:
+        """Parse DOT language content and return a Graph dictionary."""
+        nodes: Dict[str, Dict[str, Any]] = {}
+        edges: List[Dict[str, Any]] = []
+        strict = "strict" in dot_content
+        directed = "digraph" in dot_content
+
+        for line in dot_content.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+
+            # Node parsing
+            node_match = re.match(r'(\w+)\s*\[(.*?)\]', line)
+            if node_match:
+                node_id = node_match.group(1)
+                attrs_str = node_match.group(2)
+                data = None
+                if attrs_str:
+                    # Simple data attribute extraction - treat as a string
+                    # Use a more robust regex that can handle the entire content between quotes
+                    data_match = re.search(r'data="(.*?)"', attrs_str)
+                    if data_match:
+                        data = data_match.group(1)
+                nodes[node_id] = {"id": node_id, "data": data}
+                continue
             
-        try:
-            return self.parser.parse(dot_content)
-        except Exception as e:
-            raise ValueError(f"Failed to parse DOT content: {e}")
+            # Node parsing without attributes
+            node_match = re.match(r'(\w+);', line)
+            if node_match:
+                node_id = node_match.group(1)
+                nodes[node_id] = {"id": node_id, "data": None}
+                continue
 
-class DotTransformer(Transformer):
-    def __init__(self):
-        super().__init__()
-        self.nodes = {}
-        self.edges = []
-        self.strict = False
-        self.directed = False
-    
-    @v_args(inline=True)
-    def strict(self, _):
-        self.strict = True
-        return True
-    
-    @v_args(inline=True)
-    def graph_type(self, graph_type):
-        self.directed = graph_type.value == "digraph"
-        return self.directed
-    
-    def node_id(self, items):
-        return str(items[0].value)
-    
-    def attr(self, items):
-        key = str(items[0].value)
-        # Remove quotes from the string value
-        value = str(items[1].value)[1:-1]
-        return (key, value)
-    
-    def attr_list(self, items):
-        return dict(items)
-    
-    def node_stmt(self, items):
-        node_id = items[0]
-        attrs = items[1] if len(items) > 1 else {}
-        
-        # Store data as raw string if present
-        data = attrs.get('data')
-        
-        node = Node(id=node_id, data=data)
-        self.nodes[node_id] = node
-        return node
-    
-    def edge_stmt(self, items):
-        source = items[0]
-        target = items[1]
-        attrs = items[2] if len(items) > 2 else {}
-        
-        # Store label and data as raw strings if present
-        label = attrs.get('label')
-        data = attrs.get('data')
-        
-        edge = Edge(source=source, target=target, label=label, data=data)
-        self.edges.append(edge)
-        
-        # Ensure both nodes exist in the graph
-        if source not in self.nodes:
-            self.nodes[source] = Node(id=source)
-        if target not in self.nodes:
-            self.nodes[target] = Node(id=target)
+            # Edge parsing with label and possibly data
+            edge_match = re.match(r'(\w+)\s*->\s*(\w+)\s*\[(.*?)\]', line)
+            if edge_match:
+                source = edge_match.group(1)
+                target = edge_match.group(2)
+                attrs_str = edge_match.group(3)
+                
+                # Extract label
+                label = None
+                label_match = re.search(r'label\s*=\s*"([^"]*)"', attrs_str)
+                if label_match:
+                    label = label_match.group(1)
+                    
+                # Extract data
+                data = None
+                data_match = re.search(r'data="(.*?)"', attrs_str)
+                if data_match:
+                    data = data_match.group(1)
+                    
+                edges.append({"source": source, "target": target, "label": label, "data": data})
+                if source not in nodes:
+                    nodes[source] = {"id": source, "data": None}
+                if target not in nodes:
+                    nodes[target] = {"id": target, "data": None}
+                continue
             
-        return edge
-    
-    def stmt(self, items):
-        return items[0]
-    
-    def stmt_list(self, items):
-        return items
-    
-    def graph(self, items):
-        # Process strict flag if present
-        i = 0
-        if items and isinstance(items[0], bool):
-            self.strict = items[0]
-            i += 1
-        
-        # Process directed flag
-        if i < len(items) and isinstance(items[i], bool):
-            self.directed = items[i]
-            i += 1
-        
-        # Skip the opening and closing braces in our grammar
-        return Graph(
-            strict=self.strict,
-            directed=self.directed,
-            nodes=self.nodes,
-            edges=self.edges
-        )
-    
-    def start(self, items):
-        return items[0]
+            edge_match = re.match(r'(\w+)\s*->\s*(\w+)', line)
+            if edge_match:
+                source = edge_match.group(1)
+                target = edge_match.group(2)
+                edges.append({"source": source, "target": target, "label": None, "data": None})
+                if source not in nodes:
+                    nodes[source] = {"id": source, "data": None}
+                if target not in nodes:
+                    nodes[target] = {"id": target, "data": None}
+                continue
 
-# Example usage
-def parse_dot(dot_content):
-    parser = DotParser()
-    graph = parser.parse(dot_content)
-    return graph
+        return {
+            "strict": strict,
+            "directed": directed,
+            "nodes": nodes,
+            "edges": edges
+        }
 
-# Pretty printing functions
-def print_graph(graph):
-    print(f"Graph: strict={graph.strict}, directed={graph.directed}")
-    print("\nNodes:")
-    for node_id, node in graph.nodes.items():
-        print(f"  {node}")
-    
-    print("\nEdges:")
-    for edge in graph.edges:
-        print(f"  {edge}")
+    # Pretty printing functions
+    def print_graph(self, graph):
+        print(f"Graph: strict={graph['strict']}, directed={graph['directed']}")
+        print("\nNodes:")
+        for node_id, node in graph['nodes'].items():
+            print(f"  Node({node['id']}, data={node['data']})")
+        
+        print("\nEdges:")
+        for edge in graph['edges']:
+            print(f"  Edge({edge['source']} -> {edge['target']}, label={edge['label']}, data={edge['data']})")
+
+    # Helper functions to maintain compatibility with tests
+    def node_str(self, node):
+        """Return string representation of a node dictionary."""
+        return f"Node({node['id']}, data={node['data']})"
+
+    def edge_str(self, edge):
+        """Return string representation of an edge dictionary."""
+        return f"Edge({edge['source']} -> {edge['target']}, label={edge['label']}, data={edge['data']})"
+
+    def graph_str(self, graph):
+        """Return string representation of a graph dictionary."""
+        return f"Graph(strict={graph['strict']}, directed={graph['directed']}, nodes={list(graph['nodes'].keys())}, edges={len(graph['edges'])})"
 
 # Test with the provided example
 if __name__ == "__main__":
@@ -198,7 +124,8 @@ if __name__ == "__main__":
     '''
     
     try:
-        graph = parse_dot(dot_example)
-        print_graph(graph)
+        parser = DotParser()
+        graph = parser.parse(dot_example)
+        parser.print_graph(graph)
     except Exception as e:
         print(f"Error parsing DOT: {e}")

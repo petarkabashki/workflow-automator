@@ -193,24 +193,24 @@ class WFEngine:
         """Creates an WFEngine from a DOT string."""
         try:
             parser = DotParser()
-            parser.parse(dot_string)
-            if not parser.nodes or not parser.edges:
+            graph = parser.parse(dot_string)
+            if not graph or not graph['nodes'] or not graph['edges']:
                 print("Error: No graph could be created from DOT string. Check for parsing errors.")
                 return None
 
             # Extract node names from parser.nodes
-            nodes = [utils.strip_quotes(node['name']).strip() for node in parser.nodes]
-            
+            nodes = [utils.strip_quotes(node['id']).strip() for node in graph['nodes'].values()]
+
             # Build transitions dictionary
             transitions = {}
-            for edge in parser.edges:
+            for edge in graph['edges']:
                 source = utils.strip_quotes(edge['source']).strip()
-                destination = utils.strip_quotes(edge['destination']).strip()
-                label = edge.get('attributes', {}).get('label', '')  # Default to empty string if no label
-                
+                destination = utils.strip_quotes(edge['target']).strip()
+                label = edge.get('label', '')  # Default to empty string if no label
+
                 if source not in transitions:
                     transitions[source] = []
-                
+
                 # Extract condition from label if present
                 condition = ""
                 if label:
@@ -218,9 +218,9 @@ class WFEngine:
                     if "(" in label and ")" in label:
                         label = label.split("(", 1)[1].rsplit(")", 1)[0].strip()
                     condition = utils.strip_quotes(label.strip())
-                
+
                 transitions[source].append((destination, condition))
-            
+
             return WFEngine(nodes, transitions, None, state_functions)
         except Exception as e:
             print(f"Error creating workflow engine: {e}")
