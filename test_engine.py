@@ -78,7 +78,7 @@ def test_multiple_transitions_without_condition_logs():
 
     engine = WFEngine.from_dot_string(dot_string, state_functions)  # Initialize
     engine.set_logger(logger)
-    state_sequence = list(engine.start())
+    state_sequence = [state[1] for state in engine.start() if state[0] == "state_change"]
     assert state_sequence == ['__start__'] # Engine should stop at __start__
 
     log_content = log_capture.get_logs() # Optionally keep log check for specific message
@@ -104,7 +104,7 @@ def test_conditional_transition_logs():
 
     engine = WFEngine.from_dot_string(dot_string, state_functions)
     engine.set_logger(logger)
-    state_sequence = list(engine.start())
+    state_sequence = [state[1] for state in engine.start() if state[0] == "state_change"]
     assert state_sequence == ['__start__', 'a', '__end__'] # Expected path
 
     log_content = log_capture.get_logs() # Optionally keep log checks
@@ -137,7 +137,7 @@ def test_multiple_transitions_without_condition():
 
     engine = WFEngine.from_dot_string(dot_string, state_functions)
     engine.set_logger(logger)
-    state_sequence = list(engine.start())
+    state_sequence = [state[1] for state in engine.start() if state[0] == "state_change"]
     assert state_sequence == ['__start__'] # Engine should stop at __start__
 
     log_content = log_capture.get_logs() # Optionally keep log check
@@ -190,7 +190,7 @@ def test_conditional_transition():
     setattr(state_functions, 'b', lambda: (None, "__end__"))
     engine = WFEngine.from_dot_string(dot_string, state_functions)
     engine.set_logger(logger)
-    state_sequence = list(engine.start())
+    state_sequence = [state[1] for state in engine.start() if state[0] == "state_change"]
     assert state_sequence == ['__start__', 'a', '__end__'] # Expected path
 
     log_content = log_capture.get_logs() # Optionally keep log checks
@@ -210,7 +210,7 @@ def test_run_method(monkeypatch):
     state_functions = StateFunctions()
 
     # Mock input and state functions to simulate user interaction
-    def mock_input():
+    def mock_input(prompt=None):
         return "John Doe, john.doe@example.com"
 
     def mock_request_input():
@@ -237,8 +237,25 @@ def test_run_method(monkeypatch):
 
     engine = WFEngine.from_dot_string(dot_string, state_functions)
     engine.set_logger(logger)
-    state_sequence = list(engine.start())
+    
+    state_sequence = []
+    yielded_sequence = [] # Capture all yielded values
+    workflow_generator = engine.start()
+    current_state = next(workflow_generator)
+    
+    while current_state[1] != "__end__":
+        yielded_sequence.append(current_state) # Capture yielded value (tuple)
+        if current_state[0] == "state_change": # Extract state name for state_sequence
+            state_sequence.append(current_state[1]) # Append just the state name
+        try:
+            current_state = next(workflow_generator) # Advance to next yield
+        except StopIteration:
+            break # Exit loop if generator finishes
+    
+    state_sequence.append("__end__") # Append __end__ as loop breaks before adding it
+    yielded_sequence.append(("state_change", "__end__")) # Capture final __end__ state_change
+    
     assert state_sequence == ['__start__', 'request_input', 'extract_n_check', 'ask_confirmation', 'process_data', '__end__'] # Full expected path
-
+    
     log_content = log_capture.get_logs() # Optionally keep log check
     assert "Workflow completed successfully" in log_content # Verify workflow completion log

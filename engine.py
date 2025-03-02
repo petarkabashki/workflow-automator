@@ -123,7 +123,7 @@ class WFEngine:
             return
 
         while self.current_state:
-            yield self.current_state  # Yield the current state name
+            yield ("state_change", self.current_state)  # Yield state change event
             self.logger.debug(f"Current state: {self.current_state}") # Log after yielding
             
             # If we've reached the end state, break after yielding it
