@@ -1,61 +1,48 @@
 class StateFunctions:
     """
-    This class houses synchronous state function logic.
+    This class houses state function logic. State functions can now:
+    - Request input
+    - Provide progress updates
+    - Issue state change instructions
+    - Accept arguments from the engine's caller
     """
 
     def __init__(self):
-        self.context = {}  # Initialize context here
-        self.interaction_history = []  # Initialize history here
+        self.context = {}
 
-    def request_input(self):
-        """Requests user input for name and email."""
-        print("Please enter your name:")
-        self.context["name"] = input()
-        print("Please enter your email:")
-        self.context["email"] = input()
-        # Check for any input, if empty, loop back
-        if not self.context["name"] or not self.context["email"] or not self.context["name"].strip() or not self.context["email"].strip():
-            print("Name and email are required.")
-            self.interaction_history.append(("user", f"Input: Name={self.context.get('name', '')}, Email={self.context.get('email', '')}"))
-            return "NOK", None  # Loop back to request_input
+    def start(self, arg=None):
+        """Initial state function."""
+        print("Starting workflow...")
+        return ('state_change', 'request_name')
+
+    def request_name(self, arg=None):
+        """Requests the user's name."""
+        return ('input', 'Please enter your name:')
+
+    def process_name(self, name=None):
+        """Processes the received name and requests age."""
+        if name:
+            self.context['name'] = name
+            print(f"Hello, {name}!")
+            return ('input', 'Please enter your age:')
+        else:
+            return ('input', 'Name is required. Please enter your name:')
         
-        self.interaction_history.append(("user", f"Input: Name={self.context['name']}, Email={self.context['email']}"))
-        return "OK", None
-
-    def extract_n_check(self):
-        """Extracts and checks the collected data."""
-        print(f"Extracting and Checking {self.context}")
-        self.interaction_history.append(("system", f"Extracting and checking: {self.context}"))
-        if "name" in self.context and "email" in self.context:
-            return "OK", None
+    def process_age(self, age=None):
+        """Processes the received age and transitions to the end."""
+        if age:
+            try:
+                age = int(age)
+                self.context['age'] = age
+                print(f"You are {age} years old.")
+                return ('progress', 100)  # Indicate completion
+            except ValueError:
+                return ('input', 'Invalid age. Please enter a number:')
         else:
-            return "NOK", None # This case should not happen based on the workflow, but is added for completeness
+            return ('input', 'Age is required. Please enter your age:')
 
-    def ask_confirmation(self):
-        """Asks for confirmation from the user."""
-        print("Do you confirm the data is correct? (yes/no/quit)")
-        confirmation = input()
-        self.interaction_history.append(("user", f"Confirmation input: {confirmation}"))
-        if confirmation.lower() in ["yes", "y"]:
-            return "Y", None
-        elif confirmation.lower() in [ "no", "n"] :
-            return "N", None
-        elif confirmation.lower() in ["quit", "q"]:
-            return "Q", None
-        else:
-            print("Invalid input. Please enter 'yes', 'no', or 'quit'.")
-            return None, None # Stay in ask_confirmation state
-
-
-    def process_data(self):
-        """Processes the collected data (prints it in this example)."""
-        print("Processing ")
-        print(f"  Name: {self.context['name']}")
-        print(f"  Email: {self.context['email']}")
-        self.interaction_history.append(("system", "Data processed."))
-        return None, None  # No label defined in workflow.dot, goes to __end__
-
-    def __start__(self):
-        """Start state"""
-        self.interaction_history.append(("system", "Workflow started."))
-        return None, None
+    def end(self, arg=None):
+        """Final state function."""
+        print("Workflow completed.")
+        print(f"Collected data: {self.context}")
+        return ('end',)

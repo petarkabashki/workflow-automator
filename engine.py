@@ -1,7 +1,5 @@
-from dot_parser import DotParser
-import utils
-import logging
 from typing import Dict, List, Any, Tuple, Generator, Optional, Union, Callable
+import logging
 
 # Module-level logger
 logger = logging.getLogger(__name__)
@@ -12,16 +10,17 @@ if not logger.handlers:
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
+
 class StateFunctionRegistry:
     """Registry for state functions to allow dynamic registration and retrieval."""
-    
+
     def __init__(self):
         self._registry = {}
 
     def register(self, state_name: str, func: Callable) -> None:
         """
         Registers a state function for the given state name.
-        
+
         Args:
             state_name: The name of the state to register
             func: The function to associate with the state
@@ -31,429 +30,108 @@ class StateFunctionRegistry:
     def get_function(self, state_name: str) -> Optional[Callable]:
         """
         Retrieves the state function for the given state name.
-        
+
         Args:
             state_name: The name of the state to retrieve
-            
+
         Returns:
             The function associated with the state or None if not found
         """
         return self._registry.get(state_name)
 
-# Workflow engine implementation as a generator
+
 class Engine:
-    """
-    The WFEngine class manages state transitions and state method invocations.
-    It supports conditional transitions, state-specific methods,
-    and integration with external systems.
-    """
-
-    def __init__(self, states: List[str] = None, transitions: Dict[str, List[Tuple[str, str]]] = None, 
-                 current_state: str = None, state_functions: Any = None, max_queue_size: int = 100):
+    def __init__(self, registered_functions: Dict[str, Callable]) -> None:
         """
-        Initialize the workflow engine.
-        
+        Engine implemented as a generator function.
+
         Args:
-            states: List of state names
-            transitions: Dictionary mapping source states to lists of (destination, condition) tuples
-            current_state: The initial state of the workflow
-            state_functions: Object containing state functions as methods
-            max_queue_size: Maximum size of the instruction queue
-        """
-        # Initialize states and transitions (handling None values)
-        self.states = states if states is not None else []
-        self.transitions = transitions if transitions is not None else {}
-        self.current_state = current_state
-        self.max_queue_size = max_queue_size
-        
-        # Initialize logger
-        self.logger = logger
-        
-        # Initialize state function registry
-        self.state_registry = StateFunctionRegistry()
-        if state_functions:
-            for state in dir(state_functions):
-                if not state.startswith('_') and callable(getattr(state_functions, state)):
-                    self.state_registry.register(state, getattr(state_functions, state))
-        
-        # New attributes for instruction handling
-        self.instruction_queue = []  # Queue for external instructions
-        self.state_gen = None  # Current state function generator
+            registered_functions: A dictionary mapping state names to generator functions.
 
-    def set_logger(self, logger: logging.Logger) -> None:
-        """
-        Sets the logger for the engine.
-        
-        Args:
-            logger: The logger instance to use
-        """
-        self.logger = logger
-
-    def _run_state(self, state_name: str, arg: Any = None) -> Any:
-        """
-        Runs the method associated with the given state.
-        
-        Args:
-            state_name: The name of the state to run
-            arg: Optional argument to pass to the state function
-            
-        Returns:
-            The result of the state function or None if an error occurs
-        """
-        self.logger.debug(f"Running state: {state_name}")
-        
-        # Get the state function from the registry
-        state_func = self.state_registry.get_function(state_name)
-        if not state_func:
-            self.logger.error(f"No function found for state: {state_name}")
-            return None  # No function associated with the state
-
-        try:
-            result = state_func(arg)
-            return result
-        except Exception as e:
-            self.logger.error(f"Error in state function {state_name}: {e}")
-            return None
-
-    def start(self) -> Optional[Generator]:
-        """
-        Starts the engine from the initial state and returns a generator.
-        
-        Returns:
-            A generator that processes the workflow or None if no states are defined
-        """
-        self.logger.debug("Starting engine")
-
-        if not self.states:
-            self.logger.warning("No states defined.")
-            return None
-
-        # Find and set the initial state
-        initial_state = self._find_initial_state()
-        if initial_state:
-            self.current_state = initial_state
-            self.logger.debug(f"Initial state: {self.current_state}")
-            return self.run()  # Return the generator
-        else:
-            self.logger.error("No valid initial state found.")
-            return None
-
-    def _find_initial_state(self) -> Optional[str]:
-        """
-        Determines the initial state of the workflow.
-        
-        Returns:
-            The name of the initial state or None if no initial state is found
-        """
-        # Check if '__start__' is defined
-        if "__start__" in self.states:
-            return "__start__"
-
-        # Look for states with no incoming transitions
-        incoming_states = set()
-        for destinations in self.transitions.values():
-            incoming_states.update(dest for dest, _ in destinations)
-        initial_states = [state for state in self.states if state not in incoming_states]
-
-        if not initial_states:
-            return None  # No initial state found
-        elif len(initial_states) > 1:
-            self.logger.warning("Multiple potential initial states found. Using the first one.")
-            return initial_states[0]  # Return the first potential initial state
-        else:
-            return initial_states[0]  # Single initial state
-
-    def _handle_state_change(self, new_state: str) -> Tuple[str, str]:
-        """
-        Handles state change to the new state and validates the transition.
-        Includes error handling and fallback options.
-        
-        Args:
-            new_state: The new state to transition to
-            
-        Returns:
-            A tuple containing the state_change instruction and the current state
-        """
-        try:
-            if new_state not in self.states:
-                self.logger.error(f"Invalid state transition to: {new_state}")
-                # Fallback to initial state or a default error state
-                fallback_state = self._find_initial_state() or "__error__"
-                if fallback_state in self.states:
-                    new_state = fallback_state
-                    self.logger.info(f"Fallback to state: {new_state}")
-                else:
-                    # Stay in current state if fallback is also invalid
-                    return ("error", f"Invalid state transition to: {new_state}")
-                
-            self.current_state = new_state
-            self.logger.info(f"State changed to: {self.current_state}")
-            return ("state_change", self.current_state)
-        except Exception as e:
-            self.logger.error(f"Unexpected error during state change: {e}")
-            return ("error", f"State change failed: {e}")
-
-    def _process_instruction(self, instruction: str, context: Any, state_gen: Generator) -> Tuple[str, Any]:
-        """
-        Processes an instruction with the current state generator.
-        
-        Args:
-            instruction: The instruction to process
-            context: The context for the instruction
-            state_gen: The current state generator
-            
-        Returns:
-            The response from the state generator or a state change notification
-        """
-        try:
-            response = state_gen.send((instruction, context))
-            
-            # Handle state change instruction
-            if isinstance(response, tuple) and response[0] == 'state_change':
-                new_state = response[1]
-                self.logger.info(f"Processing state change to: {new_state}")
-                
-                if new_state in self.states:
-                    self.current_state = new_state
-                    # Reset state generator for new state
-                    self.state_gen = None
-                    return ("state_change", self.current_state)
-                else:
-                    self.logger.error(f"Invalid state transition requested: {new_state}")
-                    return ("error", f"Invalid state: {new_state}")
-            else:
-                # Pass through any other response
-                return response
-                
-        except StopIteration:
-            self.logger.info(f"State function for {self.current_state} completed")
-            self.state_gen = None
-            
-            # Auto-transition if there's only one possible next state
-            if self.current_state in self.transitions:
-                destinations = self.transitions[self.current_state]
-                if len(destinations) == 1:
-                    next_state, condition = destinations[0]
-                    if not condition:  # Only auto-transition if no condition
-                        self.current_state = next_state
-                        return ("state_change", self.current_state)
-            
-            return ("state_complete", self.current_state)
-            
-        except Exception as e:
-            self.logger.error(f"Error in state generator: {e}")
-            self.state_gen = None
-            return ("error", str(e))
-
-    def run(self) -> Generator[Tuple[str, Any], Tuple[str, Any], None]:
-        """
-        Generator that processes state functions and handles instructions.
-        Yields and receives (instruction, context) tuples.
-        
         Yields:
-            Tuple[str, Any]: A tuple containing an instruction and context.
-            
+            Tuples of (instruction, context, current_node_name, current_node) received from the current node.
+
         Receives:
-            Tuple[str, Any]: A tuple containing an instruction and context to process.
+            Tuples of (instruction, context) to be passed to the current node.
         """
-        self.logger.debug("Starting engine run")
 
-        # Initial state change notification
-        yield ("state_change", self.current_state)
-        
-        # Check if we're starting at the end state
-        if self.current_state == "__end__":
-            self.logger.debug("Workflow completed - reached end state")
-            return
-        
-        while self.current_state:
-            # Process any queued external instructions first
-            if self.instruction_queue:
-                instruction, context = self.instruction_queue.pop(0)
-                self.logger.debug(f"Processing queued instruction: {instruction}")
-                yield (instruction, context)
-                continue
+        # Enforce starting from '__start__'
+        self.registered_functions = registered_functions
+        if "__start__" not in registered_functions:
+            raise ValueError("Registered functions must include a '__start__' node.")
 
-            # Initialize state generator if needed
-            if not self.state_gen:
-                self.state_gen = self._get_state_generator(self.current_state)
-                if not self.state_gen:
-                    self.logger.error(f"Failed to get generator for state: {self.current_state}")
-                    yield ("error", f"Failed to initialize state: {self.current_state}")
-                    break
+        self.current_node_name = "__start__"  # Initialize current_node_name
+        self.current_node = self.registered_functions["__start__"]
+        self.instruction, self.context = None, None
+        self.current_node_instance = self.current_node()  # Instantiate the generator
+        received_from_node = next(self.current_node_instance)  # Prime
+        self.temp_yield = (
+            self.current_node_name,  # Yield the function, not the instance
+            received_from_node[0] if received_from_node is not None else None,
+            received_from_node[1] if received_from_node is not None else None,
+        )
 
+    def run(self) -> Generator:
+        yield self.temp_yield  # and yield immediately with node
+
+        while True:
             try:
-                # Get instruction/context from external or state function
-                instruction, context = yield
-                
-                # Process the instruction
-                response = self._process_instruction(instruction, context, self.state_gen)
-                
-                # Check if we've reached the end state after processing
-                if response[0] == "state_change" and response[1] == "__end__":
-                    self.logger.info("Workflow completed successfully")
-                    yield response
-                    break
-                
-                # Yield the response
-                yield response
-                    
-            except Exception as e:
-                self.logger.error(f"Unexpected error in run loop: {e}")
+                if self.instruction == "transition" or self.instruction == "node_transition":
+                    next_node_name = self.context
+                    if next_node_name == "__end__":
+                        yield (None, "transition", "__end__")  # Yield transition to __end__ with None node
+                        break  # Stop after yielding the transition to __end__
+                    if next_node_name not in self.registered_functions:
+                        raise KeyError(f"Invalid transition target: {next_node_name}")
+                    self.current_node_name = next_node_name  # Update current_node_name
+                    self.current_node = self.registered_functions[next_node_name]
+                    self.current_node_instance = self.current_node()  # Instantiate the generator
+                    # Yield the NEXT node, along with the transition instruction
+                    yield (next_node_name, "transition", next_node_name)
+                    # The next input will be sent to this new node, and we receive it here
+                    self.instruction, self.context = yield
+                else:
+                    received_from_node = self.current_node_instance.send((self.instruction, self.context))
+                    self.instruction, self.context = received_from_node
+                    temp_yield = (self.current_node_name, self.instruction, self.context)
+                    print(f"Engine yielding in else: {temp_yield}")
+                    yield temp_yield
+
+            except StopIteration:
+                break
+            except KeyError as e:
                 yield ("error", str(e))
-                
-        self.logger.info("Workflow engine run completed")
+                break
 
-    def _get_state_generator(self, state_name: str) -> Optional[Generator]:
+    def run_engine(self, registered_functions: Dict[str, Callable]):
         """
-        Creates and initializes a generator for the specified state function.
-        
+        Runs the engine, handling instructions and transitions.
+
         Args:
-            state_name: The name of the state to get a generator for
-            
-        Returns:
-            An initialized generator for the state function or None if an error occurs
+            registered_functions: A dictionary mapping state names to generator functions.
         """
-        self.logger.debug(f"Getting generator for state: {state_name}")
-        
-        if not state_name:
-            self.logger.error("State name is required to get the generator.")
-            return None
-        
-        state_func = self.state_registry.get_function(state_name)
-        if not state_func:
-            self.logger.error(f"No function found for state: {state_name}")
-            return None
-            
-        # Check if the function is a generator function
+        instruction, context = None, None
+        engine_instance = Engine(registered_functions)
+        engine = engine_instance.run()
+        # Prime the engine generator
         try:
-            gen = state_func()
-            # Prime the generator
-            next(gen)
-            return gen
-        except TypeError as e:
-            self.logger.error(f"State function {state_name} is not a generator: {e}")
-            return None
-        except Exception as e:
-            self.logger.error(f"Error initializing generator for state {state_name}: {e}")
-            return None
+            response = next(engine)
+            current_node, instruction, context = response  # Unpack current_node, instruction, and context
+            print(f"Engine output: {instruction}, {context}")  # For demonstration
+        except StopIteration:
+            return
 
-    def send_instruction(self, instruction: str, context: Any = None) -> bool:
-        """
-        Queues an instruction to be processed by the engine.
-        Includes a mechanism to manage queue size.
-        
-        Args:
-            instruction: The instruction to queue
-            context: Optional context for the instruction
-            
-        Returns:
-            True if the instruction was queued, False if the queue is full
-        """
-        self.logger.debug(f"Queuing instruction: {instruction}, context: {context}")
-        
-        # Implement a maximum queue size
-        if len(self.instruction_queue) >= self.max_queue_size:
-            self.logger.warning(f"Instruction queue is full (max size: {self.max_queue_size}). Discarding oldest instruction.")
-            self.instruction_queue.pop(0)
-            
-        self.instruction_queue.append((instruction, context))
-        return True
+        while True:
+            try:
+                response = engine.send((instruction, context))
+                current_node, instruction, context = response  # Unpack current_node, instruction, and context
+                print(f"Engine output: {instruction}, {context}")  # For demonstration
 
-    @staticmethod
-    def from_dot_string(dot_string: str, state_functions: Any) -> Optional['Engine']:
-        """
-        Creates an WFEngine from a DOT string.
-        
-        Args:
-            dot_string: The DOT string representing the workflow graph
-            state_functions: Object containing state functions as methods
-            
-        Returns:
-            An initialized Engine instance or None if an error occurs
-        """
-        try:
-            parser = DotParser()
-            graph = parser.parse(dot_string)
-            if not graph or not graph['nodes'] or not graph['edges']:
-                print("Error: No graph could be created from DOT string. Check for parsing errors.")
-                return None
+                if instruction == "transition" and context == "__end__":
+                    print("Reached end state - capturing final output")  # DEBUG print
+                    # Capture the __end__ transition output BEFORE breaking
+                    # No need to do anything special, the 'output.append((instruction, context))' in run_and_capture already captures it
+                    break  # Exit if engine transitions to the end node
 
-            # Extract node names from parser.nodes
-            nodes = [utils.strip_quotes(node['id']).strip() for node in graph['nodes'].values()]
-
-            # Build transitions dictionary
-            transitions = {}
-            for edge in graph['edges']:
-                source = utils.strip_quotes(edge['source']).strip()
-                destination = utils.strip_quotes(edge['target']).strip()
-                label = edge.get('label', '')  # Default to empty string if no label
-                print(f"DEBUG: Edge - source: {source}, destination: {destination}, label: {label}")
-
-                if source not in transitions:
-                    transitions[source] = []
-
-                # Extract condition from label if present
-                condition = ""
-                if label:
-                    # Remove parentheses if they exist
-                    if "(" in label and ")" in label:
-                        label = label.split("(", 1)[1].rsplit(")", 1)[0].strip()
-                    condition = utils.strip_quotes(label.strip())
-
-                transitions[source].append((destination, condition))
-
-            print(f"DEBUG: from_dot_string - nodes: {nodes}")
-            print(f"DEBUG: from_dot_string - transitions: {transitions}")
-            print(f"DEBUG: from_dot_string - state_functions: {state_functions}")
-            return Engine(nodes, transitions, None, state_functions)
-        except Exception as e:
-            print(f"Error creating workflow engine: {e}")
-            return None
-
-    @staticmethod
-    def from_nodes_and_edges(nodes: List[str], edges: List[Dict[str, str]], state_functions: Any) -> 'Engine':
-        """
-        Creates an WFEngine from lists of nodes and edges.
-        
-        Args:
-            nodes: List of node names
-            edges: List of edge dictionaries with source, target, and optional label
-            state_functions: Object containing state functions as methods
-            
-        Returns:
-            An initialized Engine instance
-        """
-        # For now, raise a NotImplementedError.  This method is not yet used.
-        raise NotImplementedError("Use from_dot_string instead")
-
-    def render_graph(self, output_file: str =  "workflow", format_type: str = "png") -> None:
-        """
-        Renders the workflow graph to a file using Graphviz.
-
-        Args:
-            output_file: The name of the output file (without extension).
-            format_type: The desired output format (e.g., "png", "pdf", "svg").
-        """
-        try:
-            from graphviz import Digraph
-
-            dot = Digraph(comment='Workflow')
-
-            # Add nodes
-            for state in self.states:
-                dot.node(state)
-
-            # Add edges with labels
-            for source, destinations in self.transitions.items():
-                for destination, label in destinations:
-                    dot.edge(source, destination, label=label)
-
-            # Render to file
-            dot.render(output_file, format=format_type, cleanup=True)
-            print(f"Workflow graph rendered to {output_file}.{format_type}")
-
-        except ImportError:
-            print("Graphviz is not installed. Please install it to render the graph.")
-        except Exception as e:
-            print(f"An error occurred while rendering the graph: {e}")
+            except StopIteration:
+                break

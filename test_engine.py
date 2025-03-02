@@ -1,261 +1,78 @@
 import pytest
-from engine import WFEngine
-from state_functions import StateFunctions
-import logging
+from engine import Engine
 
-def clean_test_logs():
-    with open(f'engine_log.txt', 'w') as f:
-        f.write('')
 
-class LogCaptureHandler(logging.Handler):
-    def __init__(self):
-        super().__init__()
-        self.log_records = []
-        
-    def emit(self, record):
-        self.log_records.append(self.format(record))
-        
-    def get_logs(self):
-        return '\n'.join(self.log_records)
-        
-    def clear(self):
-        self.log_records = []
+def test_basic_transition():
+    def start():
+        yield "transition", "next_state"
 
-def setup_test_logger(test_name):
-    clean_test_logs()  # Ensure logs are clean before each test
-    logger = logging.getLogger(test_name)
-    logger.setLevel(logging.DEBUG)
-    
-    # File handler for backward compatibility
-    fh = logging.FileHandler('engine_log.txt')
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    fh.setFormatter(formatter)
-    
-    # Memory capture handler
-    ch = LogCaptureHandler()
-    ch.setFormatter(formatter)
-    
-    logger.handlers = []  # Clear any existing handlers
-    logger.addHandler(fh)
-    logger.addHandler(ch)
-    return logger, ch
+    def next_state():
+        yield "done", {}
 
-def create_test_engine(logger=None, dot_string=None):
-    """Creates a test engine instance, optionally with a custom dot string."""
-    if logger is None:
-        logger, _ = setup_test_logger('test_engine')
-    if dot_string is None:
-        dot_string = """
-        strict digraph {
-            __start__ -> __end__;
-        }
-        """
-    state_functions = StateFunctions()
-    engine = WFEngine.from_dot_string(dot_string, state_functions)
-    engine.set_logger(logger)
-    return engine
-
-# --- Tests ---
-
-def test_multiple_transitions_without_condition_logs():
-    """
-    Test that appropriate error messages are logged when multiple transitions
-    exist but no condition is provided.
-    """
-    logger, log_capture = setup_test_logger('test_multiple_transitions_without_condition_logs')
-    dot_string = """
-    strict digraph {
-        __start__ -> a;
-        __start__ -> b;
-        a -> __end__;
-        b -> __end__;
+    registered_functions = {
+        "__start__": start,
+        "next_state": next_state
     }
-    """
-    state_functions = StateFunctions()
-    setattr(state_functions, '__start__', lambda: (None, None))
-    setattr(state_functions, 'a', lambda: (None, None))
-    setattr(state_functions, 'b', lambda: (None, None))
+    engine = Engine(registered_functions)
+    engine_instance = engine.run()
+    result = next(engine_instance)
+    assert result[0] == "__start__"
+    assert result[1:] == ("transition", "next_state")
+    instruction, context = result[1:]
+    with pytest.raises(StopIteration):
+        result = engine_instance.send((instruction, context))
 
-    engine = WFEngine.from_dot_string(dot_string, state_functions)  # Initialize
-    engine.set_logger(logger)
-    state_sequence = [state[1] for state in engine.start() if state[0] == "state_change"]
-    assert state_sequence == ['__start__'] # Engine should stop at __start__
 
-    log_content = log_capture.get_logs() # Optionally keep log check for specific message
-    assert "Multiple transitions available" in log_content # Verify log message
-
-def test_conditional_transition_logs():
-    """
-    Test that appropriate debug messages are logged during conditional transitions.
-    """
-    logger, log_capture = setup_test_logger('test_conditional_transition_logs')
-    dot_string = """
-    strict digraph {
-        __start__ -> a [label="OK"];
-        __start__ -> b [label="NOK"];
-        a -> __end__;
-        b -> __end__;
+def test_end_state():
+    def start():
+        yield "transition", "__end__"
+    registered_functions = {
+        "__start__": start
     }
-    """
-    state_functions = StateFunctions()
-    setattr(state_functions, '__start__', lambda: ("OK", None))
-    setattr(state_functions, 'a', lambda: (None, "__end__"))
-    setattr(state_functions, 'b', lambda: (None, None))
+    engine = Engine(registered_functions)
+    engine_instance = engine.run()
+    result = next(engine_instance)
+    assert result[0] == "__start__"
+    assert result[1:] == ("transition", "__end__")
+    instruction, context = result[1:]
+    with pytest.raises(StopIteration):
+        result = engine_instance.send((instruction, context))
 
-    engine = WFEngine.from_dot_string(dot_string, state_functions)
-    engine.set_logger(logger)
-    state_sequence = [state[1] for state in engine.start() if state[0] == "state_change"]
-    assert state_sequence == ['__start__', 'a', '__end__'] # Expected path
 
-    log_content = log_capture.get_logs() # Optionally keep log checks
-    assert "Condition matched for transition to a" in log_content # Verify condition log
-    assert "Running state: __start__" in log_content # Verify state execution log
-    assert "Running state: a" in log_content # Verify state execution log
-    assert "State function for __start__ returned" in log_content # Verify state function result log
-    assert "State function did not return next state, checking transitions" in log_content # Verify transition check log
-    assert "Workflow completed successfully" in log_content # Verify workflow completion log
+def test_invalid_transition():
+    def start():
+        yield "transition", "invalid"
 
-def test_multiple_transitions_without_condition():
-    """
-    Test that the engine properly handles the case where a state has multiple possible
-    transitions but no condition is provided by the state function.
-    """
-    logger, log_capture = setup_test_logger('test_multiple_transitions_without_condition')
-    dot_string = """
-    strict digraph {
-        __start__ -> a;
-        __start__ -> b;
-        a -> __end__;
-        b -> __end__;
+    registered_functions = {
+        "__start__": start
     }
-    """
-    state_functions = StateFunctions()
-    # State function returns no condition but has multiple possible transitions
-    setattr(state_functions, '__start__', lambda: (None, None))
-    setattr(state_functions, 'a', lambda: (None, "__end__"))
-    setattr(state_functions, 'b', lambda: (None, "__end__"))
+    engine = Engine(registered_functions)
+    engine_instance = engine.run()
+    result = next(engine_instance)
+    assert result[0] == "__start__"
+    assert result[1:] == ("transition", "invalid")
+    instruction, context = result[1:]
+    with pytest.raises(StopIteration):
+        result = engine_instance.send((instruction, context))
 
-    engine = WFEngine.from_dot_string(dot_string, state_functions)
-    engine.set_logger(logger)
-    state_sequence = [state[1] for state in engine.start() if state[0] == "state_change"]
-    assert state_sequence == ['__start__'] # Engine should stop at __start__
 
-    log_content = log_capture.get_logs() # Optionally keep log check
-    assert "Multiple transitions available" in log_content # Verify log message
+def test_stop_iteration():
+    def start():
+        yield "transition", "next"
 
-def test_engine_creation_from_dot_string():
-    logger, _ = setup_test_logger('test_engine_creation_from_dot_string')
-    engine = create_test_engine(logger=logger)
-    assert engine is not None
-    assert "__start__" in engine.states
-    assert "__end__" in engine.states
+    def next_state():
+        return None  # next_state will now be primed but not executed
 
-def test_engine_creation_from_nodes_and_edges():
-    nodes = ['start', 'end']
-    edges = [('start', 'end')]
-    state_functions = StateFunctions()
-    setattr(state_functions, '__start__', lambda: (None, '__end__'))
-    with pytest.raises(NotImplementedError):
-        engine = WFEngine.from_nodes_and_edges(nodes, edges, state_functions)
-
-def test_state_execution():
-    logger, _ = setup_test_logger('test_state_execution')
-    dot_string = """
-    strict digraph {
-        __start__ -> __end__;
+    registered_functions = {
+        "__start__": start,
+        "next": next_state
     }
-    """
-    print(f"DOT STRING: {dot_string}")
-    state_functions = StateFunctions()
-    setattr(state_functions, '__start__', lambda: (None, '__end__'))
-    engine = WFEngine.from_dot_string(dot_string, state_functions)
-    engine.set_logger(logger)
-    result, next_state = engine._run_state('__start__')
-    assert result is None
-    assert next_state == '__end__'
+    engine = Engine(registered_functions)
+    engine_instance = engine.run()
 
-def test_conditional_transition():
-    logger, log_capture = setup_test_logger('test_conditional_transition')
-    dot_string = """
-    strict digraph {
-        __start__ -> a [label="OK"];
-        __start__ -> b [label="NOK"];
-        a -> __end__;
-        b -> __end__;
-    }
-    """
-    state_functions = StateFunctions()
-    setattr(state_functions, '__start__', lambda: ("OK", None))
-    setattr(state_functions, 'a', lambda: (None, "__end__"))
-    setattr(state_functions, 'b', lambda: (None, "__end__"))
-    engine = WFEngine.from_dot_string(dot_string, state_functions)
-    engine.set_logger(logger)
-    state_sequence = [state[1] for state in engine.start() if state[0] == "state_change"]
-    assert state_sequence == ['__start__', 'a', '__end__'] # Expected path
-
-    log_content = log_capture.get_logs() # Optionally keep log checks
-    assert "Condition matched for transition to a" in log_content # Verify condition log
-
-#%%
-def test_run_method(monkeypatch):
-    logger, log_capture = setup_test_logger('test_run_method')
-    dot_string = """
-       strict digraph {
-           __start__ -> request_input;
-           request_input -> extract_n_check;
-           extract_n_check -> ask_confirmation;
-           ask_confirmation -> process_data;
-           process_data -> __end__;
-       }
-    """
-    state_functions = StateFunctions()
-
-    # Mock input and state functions to simulate user interaction
-    def mock_input(prompt=None):
-        return "John Doe, john.doe@example.com"
-
-    def mock_request_input():
-        user_input = mock_input()
-        if "john.doe" in user_input:  # Simplified condition
-            return "OK", "extract_n_check"
-        else:
-            return "NOK", "request_input"
-
-    def mock_extract_n_check():
-        return "OK", "ask_confirmation"
-
-    def mock_ask_confirmation():
-        return "Y", "process_data"
-
-    def mock_process_data():
-        return "OK", "__end__"
-    
-    setattr(state_functions, '__start__', lambda: (None, "request_input"))
-    setattr(state_functions, 'request_input', mock_request_input)
-    setattr(state_functions, 'extract_n_check', mock_extract_n_check)
-    setattr(state_functions, 'ask_confirmation', mock_ask_confirmation)
-    setattr(state_functions, 'process_data', mock_process_data)
-
-    engine = WFEngine.from_dot_string(dot_string, state_functions)
-    engine.set_logger(logger)
-    
-    state_sequence = []
-    yielded_sequence = [] # Capture all yielded values
-    workflow_generator = engine.start()
-    current_state = next(workflow_generator)
-    
-    while True:
-        yielded_sequence.append(current_state) # Capture yielded value (tuple)
-        if current_state[0] == "state_change": # Extract state name for state_sequence
-            state_sequence.append(current_state[1]) # Append just the state name
-            if current_state[1] == "__end__":  # Break if we reach __end__ state
-                break
-        try:
-            current_state = next(workflow_generator) # Advance to next yield
-        except StopIteration:
-            break # Exit loop if generator finishes
-    
-    assert state_sequence == ['__start__', 'request_input', 'extract_n_check', 'ask_confirmation', 'process_data', '__end__'] # Full expected path
-    
-    # log_content = log_capture.get_logs() # Keep log check
-    # assert "Workflow completed successfully" in log_content # Verify workflow completion log
+    result = next(engine_instance)
+    assert result[0] == "__start__"
+    assert result[1:] == ("transition", "next")
+    instruction, context = result[1:]
+    with pytest.raises(StopIteration):
+        engine_instance.send((instruction, context))

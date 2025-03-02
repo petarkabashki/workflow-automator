@@ -1,22 +1,6 @@
-2025-03-02 03:09:06,152 - test_run_method - DEBUG - Starting engine
-2025-03-02 03:09:06,152 - test_run_method - DEBUG - Initial state: __start__
-2025-03-02 03:09:06,152 - test_run_method - DEBUG - Current state: __start__
-2025-03-02 03:09:06,152 - test_run_method - DEBUG - Running state: __start__
-2025-03-02 03:09:06,152 - test_run_method - DEBUG - State function for __start__ returned: result='None', next_state='request_input'
-2025-03-02 03:09:06,152 - test_run_method - DEBUG - State function returned next state: request_input
-2025-03-02 03:09:06,152 - test_run_method - DEBUG - Current state: request_input
-2025-03-02 03:09:06,152 - test_run_method - DEBUG - Running state: request_input
-2025-03-02 03:09:06,153 - test_run_method - DEBUG - State function for request_input returned: result='OK', next_state='extract_n_check'
-2025-03-02 03:09:06,153 - test_run_method - DEBUG - State function returned next state: extract_n_check
-2025-03-02 03:09:06,153 - test_run_method - DEBUG - Current state: extract_n_check
-2025-03-02 03:09:06,153 - test_run_method - DEBUG - Running state: extract_n_check
-2025-03-02 03:09:06,153 - test_run_method - DEBUG - State function for extract_n_check returned: result='OK', next_state='ask_confirmation'
-2025-03-02 03:09:06,153 - test_run_method - DEBUG - State function returned next state: ask_confirmation
-2025-03-02 03:09:06,153 - test_run_method - DEBUG - Current state: ask_confirmation
-2025-03-02 03:09:06,153 - test_run_method - DEBUG - Running state: ask_confirmation
-2025-03-02 03:09:06,153 - test_run_method - DEBUG - State function for ask_confirmation returned: result='Y', next_state='process_data'
-2025-03-02 03:09:06,153 - test_run_method - DEBUG - State function returned next state: process_data
-2025-03-02 03:09:06,153 - test_run_method - DEBUG - Current state: process_data
-2025-03-02 03:09:06,153 - test_run_method - DEBUG - Running state: process_data
-2025-03-02 03:09:06,153 - test_run_method - DEBUG - State function for process_data returned: result='OK', next_state='__end__'
-2025-03-02 03:09:06,153 - test_run_method - DEBUG - State function returned next state: __end__
+2025-03-02 05:00:08,101 - test_engine_interaction - DEBUG - Starting engine
+2025-03-02 05:00:08,102 - test_engine_interaction - DEBUG - Initial state: start
+2025-03-02 05:00:08,102 - test_engine_interaction - DEBUG - Starting engine run
+2025-03-02 05:00:08,102 - test_engine_interaction - DEBUG - Getting generator for state: start
+2025-03-02 05:00:08,102 - test_engine_interaction - ERROR - State function start is not a generator: 'tuple' object is not an iterator
+2025-03-02 05:00:08,102 - test_engine_interaction - ERROR - Failed to get generator for state: start
