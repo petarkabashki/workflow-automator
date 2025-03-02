@@ -11,7 +11,6 @@ class Engine:
 
     def __init__(self, states=None, transitions=None, current_state=None, state_functions=None):
         # Initialize states and transitions (handling None values)
-        # Remove usage of local states and transitions lists, as those are handled externally AI!
         self.states = states if states is not None else []
         self.transitions = transitions if transitions is not None else {}
         self.current_state = current_state
