@@ -141,8 +141,8 @@ class DotParser:
                 if '=' in attr_pair:
                     key, value = attr_pair.split('=', 1)
                     key = key.strip()
-                    value = value.strip()  # Just strip whitespace, don't remove quotes yet
+                    value_text = value.strip()  # Just strip whitespace
                     # Use our utility function to parse JSON attributes
-                    value = parse_json_attribute(value)
+                    value = parse_json_attribute(value_text)
                     attributes[key] = value
         return attributes
