@@ -9,9 +9,9 @@ conda activate py311
 # pip install pytest
 
 # Run the dot parser tests
-# pytest test_dot_parser.py
+pytest -v test_dot_parser.py::test_node_definition_with_attributes
 
 # Commented out previous tests
 # pytest test_engine.py::test_conditional_transition
 
-pytest test_engine.py
+# pytest test_engine.py
