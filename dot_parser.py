@@ -141,14 +141,14 @@ class DotParser:
                 if '=' in attr_pair:
                     key, value = attr_pair.split('=', 1)
                     key = key.strip()
-                    value_str = strip_quotes(value.strip())  # Use existing strip_quotes
-                    if value_str.startswith('{') and value_str.endswith('}'):
+                    value = value.strip()  # Just strip whitespace, don't remove quotes yet
+                    if value.startswith('{') and value.endswith('}'):
                         # Try to parse JSON if value looks like JSON
                         try:
-                            value = json.loads(value_str)
+                            value = json.loads(value)
                         except json.JSONDecodeError:
-                            value = value_str  # Fallback to string if JSON parsing fails
+                            value = strip_quotes(value)  # Fallback to string if JSON parsing fails, then strip quotes
                     else:
-                        value = value_str
+                        value = strip_quotes(value)  # For non-JSON values, strip quotes
                     attributes[key] = value
         return attributes
