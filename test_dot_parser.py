@@ -15,7 +15,7 @@ def test_simple_graph_with_nodes_and_edges_quoted():
     "Process1" -> "End";
     '''
     
-    parser = DotParser()
+    parser = DotParser(tokenize(dot_string))
     parser.parse(dot_string)
     # raise Exception (parser.nodes)
     assert len(parser.nodes) == 3, "Expected 3 nodes"
@@ -31,7 +31,7 @@ def test_simple_graph_with_nodes_and_edges_unquoted():
     Start -> Process1;
     Process1 -> End;
     '''
-    parser = DotParser()
+    parser = DotParser(tokenize(dot_string))
     parser.parse(dot_string)
     assert len(parser.nodes) == 3, "Expected 3 nodes"
     labels = [node.get('name') for node in parser.nodes]
@@ -46,7 +46,7 @@ def test_simple_graph_with_nodes_and_edges_mixed():
     "Start" -> Process1;
     Process1 -> "End";
     '''
-    parser = DotParser()
+    parser = DotParser(tokenize(dot_string))
     parser.parse(dot_string)
     assert len(parser.nodes) == 3, "Expected 3 nodes"
     labels = [node.get('name') for node in parser.nodes]
@@ -70,10 +70,11 @@ def test_comments():
     // This is a single-line comment
     "Start" -> "End"; // inline comment
     /*
-      This is a multi-line comment.
+    This is a multi-line comment.
     */
     "A" -> "B";
     '''
+    parser = DotParser(tokenize(dot_string))
     parser.parse(dot_string)
     assert len(parser.nodes) == 4
     assert len(parser.edges) == 2
