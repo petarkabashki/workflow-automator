@@ -1,9 +1,9 @@
 import pytest
-from dot_parser import DotParser
+from dot_parser import DotParser, tokenize
 
 # Test that an empty string produces no nodes or edges.
 def test_empty_string():
-    parser = DotParser()
+    parser = DotParser(tokenize(""))
     parser.parse("")
     assert len(parser.nodes) == 0
     assert len(parser.edges) == 0
@@ -57,9 +57,8 @@ def test_simple_graph_with_nodes_and_edges_mixed():
 
 # Test parsing edge label.
 def test_edge_label():
-    parser = DotParser()
     dot_string = '"Start" -> "End" [label = "Test Label"];'
-    parser = DotParser()
+    parser = DotParser(tokenize(dot_string))
     parser.parse(dot_string)
     assert len(parser.edges) == 1
     attrs = parser.edges[0].get('attributes', {})
@@ -67,7 +66,6 @@ def test_edge_label():
 
 # Test that comments (single-line and multi-line) are ignored.
 def test_comments():
-    parser = DotParser()
     dot_string = '''
     // This is a single-line comment
     "Start" -> "End"; // inline comment
@@ -82,24 +80,24 @@ def test_comments():
 
 # Test that a missing semicolon causes parsing to stop before later statements.
 def test_missing_semicolon():
-    parser = DotParser()
     dot_string = '"Start" -> "End" "A" -> "B";'
+    parser = DotParser(tokenize(dot_string))
     parser.parse(dot_string)
     assert len(parser.edges) == 1
     assert parser.edges[0]['source'] == "Start"
 
 # Test edge without label
 def test_edge_without_label():
-    parser = DotParser()
     dot_string = '"Start" -> "End";'
+    parser = DotParser(tokenize(dot_string))
     parser.parse(dot_string)
     assert len(parser.edges) == 1
     assert 'attributes' not in parser.edges[0]
 
 # Test edge without label and no attributes key
 def test_edge_without_label_no_attributes():
-    parser = DotParser()
     dot_string = 'process_data -> __end__;'
+    parser = DotParser(tokenize(dot_string))
     parser.parse(dot_string)
     assert len(parser.edges) == 1
     assert parser.edges[0]['source'] == "process_data"
@@ -108,8 +106,8 @@ def test_edge_without_label_no_attributes():
 
 # Test unquoted node names with special characters (but valid).
 def test_unquoted_node_names_with_special_chars():
-    parser = DotParser()
     dot_string = 'Start_Node -> End.Node;'
+    parser = DotParser(tokenize(dot_string))
     parser.parse(dot_string)
     assert len(parser.nodes) == 2
     assert len(parser.edges) == 1
@@ -118,8 +116,8 @@ def test_unquoted_node_names_with_special_chars():
 
 # Test unquoted node names with leading/trailing spaces (should be trimmed).
 def test_unquoted_node_names_with_spaces():
-    parser = DotParser()
     dot_string = '   Start   ->   End   ;'
+    parser = DotParser(tokenize(dot_string))
     parser.parse(dot_string)
     assert len(parser.nodes) == 2
     assert len(parser.edges) == 1
@@ -128,8 +126,8 @@ def test_unquoted_node_names_with_spaces():
 
 # Test node definition with attributes
 def test_node_definition_with_attributes():
-    parser = DotParser()
     dot_string = 'Node1 [label="Test Node", data="{\\"key\\": \\"value\\"}"];'
+    parser = DotParser(tokenize(dot_string))
     parser.parse(dot_string)
     assert len(parser.nodes) == 1
     assert parser.nodes[0]['name'] == "Node1"
@@ -140,16 +138,16 @@ def test_node_definition_with_attributes():
 
 # Test node definition without attributes
 def test_node_definition_without_attributes():
-    parser = DotParser()
     dot_string = 'Node1;'
+    parser = DotParser(tokenize(dot_string))
     parser.parse(dot_string)
     assert len(parser.nodes) == 1
     assert parser.nodes[0]['name'] == "Node1"
 
 # Test quoted node definition
 def test_quoted_node_definition():
-    parser = DotParser()
     dot_string = '"Node with spaces" [label="Test"];'
+    parser = DotParser(tokenize(dot_string))
     parser.parse(dot_string)
     assert len(parser.nodes) == 1
     assert parser.nodes[0]['name'] == "Node with spaces"
@@ -157,12 +155,12 @@ def test_quoted_node_definition():
 
 # Test mixed node definitions and edge connections
 def test_mixed_node_and_edge_definitions():
-    parser = DotParser()
     dot_string = '''
     Node1 [label="First Node"];
     Node2 [label="Second Node"];
     Node1 -> Node2;
     '''
+    parser = DotParser(tokenize(dot_string))
     parser.parse(dot_string)
     assert len(parser.nodes) == 2
     assert len(parser.edges) == 1
@@ -173,8 +171,8 @@ def test_mixed_node_and_edge_definitions():
 
 # Test edge with JSON attribute
 def test_edge_json_attribute():
-    parser = DotParser()
     dot_string = '"Start" -> "End" [data="{\\"key\\": \\"value\\", \\"number\\": 123}"];'
+    parser = DotParser(tokenize(dot_string))
     parser.parse(dot_string)
     assert len(parser.edges) == 1
     attrs = parser.edges[0].get('attributes', {})
@@ -184,8 +182,8 @@ def test_edge_json_attribute():
 
 # Test edge with string attribute
 def test_edge_string_attribute():
-    parser = DotParser()
     dot_string = '"Start" -> "End" [config = "string value"];'
+    parser = DotParser(tokenize(dot_string))
     parser.parse(dot_string)
     assert len(parser.edges) == 1
     attrs = parser.edges[0].get('attributes', {})
@@ -195,8 +193,8 @@ def test_edge_string_attribute():
 
 # Test edge with invalid JSON attribute (should fallback to string)
 def test_edge_json_attribute_invalid_json_fallback_string():
-    parser = DotParser()
     dot_string = '"Start" -> "End" [data="{invalid json}"];'
+    parser = DotParser(tokenize(dot_string))
     parser.parse(dot_string)
     assert len(parser.edges) == 1
     attrs = parser.edges[0].get('attributes', {})
