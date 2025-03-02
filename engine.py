@@ -3,16 +3,42 @@ import utils
 import logging
 from typing import Dict, List, Any, Tuple, Generator, Optional, Union, Callable
 
-def set_up_logger() -> logging.Logger:
-    """Sets up and returns a logger for the engine."""
-    logger = logging.getLogger(__name__)
-    logger.setLevel(logging.DEBUG)
-    if not logger.handlers:
-        handler = logging.StreamHandler()
-        formatter = logging.Formatter('%(levelname)s - %(message)s')
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
-    return logger
+# Module-level logger
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+if not logger.handlers:
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter('%(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
+class StateFunctionRegistry:
+    """Registry for state functions to allow dynamic registration and retrieval."""
+    
+    def __init__(self):
+        self._registry = {}
+
+    def register(self, state_name: str, func: Callable) -> None:
+        """
+        Registers a state function for the given state name.
+        
+        Args:
+            state_name: The name of the state to register
+            func: The function to associate with the state
+        """
+        self._registry[state_name] = func
+
+    def get_function(self, state_name: str) -> Optional[Callable]:
+        """
+        Retrieves the state function for the given state name.
+        
+        Args:
+            state_name: The name of the state to retrieve
+            
+        Returns:
+            The function associated with the state or None if not found
+        """
+        return self._registry.get(state_name)
 
 # Workflow engine implementation as a generator
 class Engine:
@@ -38,11 +64,17 @@ class Engine:
         self.states = states if states is not None else []
         self.transitions = transitions if transitions is not None else {}
         self.current_state = current_state
-        self.state_functions = state_functions if state_functions is not None else {}
         self.max_queue_size = max_queue_size
         
         # Initialize logger
-        self.logger = set_up_logger()
+        self.logger = logger
+        
+        # Initialize state function registry
+        self.state_registry = StateFunctionRegistry()
+        if state_functions:
+            for state in dir(state_functions):
+                if not state.startswith('_') and callable(getattr(state_functions, state)):
+                    self.state_registry.register(state, getattr(state_functions, state))
         
         # New attributes for instruction handling
         self.instruction_queue = []  # Queue for external instructions
@@ -70,14 +102,14 @@ class Engine:
         """
         self.logger.debug(f"Running state: {state_name}")
         
-        # Check if the state function exists as a method in the StateFunctions instance
-        if not hasattr(self.state_functions, state_name):
+        # Get the state function from the registry
+        state_func = self.state_registry.get_function(state_name)
+        if not state_func:
             self.logger.error(f"No function found for state: {state_name}")
             return None  # No function associated with the state
 
         try:
-            func = getattr(self.state_functions, state_name)
-            result = func(arg)
+            result = state_func(arg)
             return result
         except Exception as e:
             self.logger.error(f"Error in state function {state_name}: {e}")
@@ -142,14 +174,24 @@ class Engine:
         Returns:
             A tuple containing the state_change instruction and the current state
         """
-        if new_state not in self.states:
-            self.logger.error(f"Invalid state transition to: {new_state}")
-            # Stay in current state if transition is invalid
+        try:
+            if new_state not in self.states:
+                self.logger.error(f"Invalid state transition to: {new_state}")
+                # Fallback to initial state or a default error state
+                fallback_state = self._find_initial_state() or "__error__"
+                if fallback_state in self.states:
+                    new_state = fallback_state
+                    self.logger.info(f"Fallback to state: {new_state}")
+                else:
+                    # Stay in current state if fallback is also invalid
+                    return ("error", f"Invalid state transition to: {new_state}")
+                
+            self.current_state = new_state
+            self.logger.info(f"State changed to: {self.current_state}")
             return ("state_change", self.current_state)
-            
-        self.current_state = new_state
-        self.logger.info(f"State changed to: {self.current_state}")
-        return ("state_change", self.current_state)
+        except Exception as e:
+            self.logger.error(f"Unexpected error during state change: {e}")
+            return ("error", f"State change failed: {e}")
 
     def _process_instruction(self, instruction: str, context: Any, state_gen: Generator) -> Tuple[str, Any]:
         """
@@ -277,13 +319,12 @@ class Engine:
         if not state_name:
             self.logger.error("State name is required to get the generator.")
             return None
-            
-        if not hasattr(self.state_functions, state_name):
+        
+        state_func = self.state_registry.get_function(state_name)
+        if not state_func:
             self.logger.error(f"No function found for state: {state_name}")
             return None
             
-        state_func = getattr(self.state_functions, state_name)
-        
         # Check if the function is a generator function
         try:
             gen = state_func()
@@ -313,8 +354,8 @@ class Engine:
         
         # Implement a maximum queue size
         if len(self.instruction_queue) >= self.max_queue_size:
-            self.logger.warning(f"Instruction queue is full (max size: {self.max_queue_size}). Discarding instruction.")
-            return False
+            self.logger.warning(f"Instruction queue is full (max size: {self.max_queue_size}). Discarding oldest instruction.")
+            self.instruction_queue.pop(0)
             
         self.instruction_queue.append((instruction, context))
         return True
@@ -386,7 +427,7 @@ class Engine:
         # For now, raise a NotImplementedError.  This method is not yet used.
         raise NotImplementedError("Use from_dot_string instead")
 
-    def render_graph(self, output_file: str = "workflow", format_type: str = "png") -> None:
+    def render_graph(self, output_file: str =  "workflow", format_type: str = "png") -> None:
         """
         Renders the workflow graph to a file using Graphviz.
 
