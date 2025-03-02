@@ -178,7 +178,7 @@ def test_mixed_node_and_edge_definitions():
 # @pytest.mark.skip(reason="Test might be failing, needs investigation")
 def test_edge_json_attribute():
     parser = DotParser()
-    dot_string = '"Start" -> "End" [data = \'{"key": "value", "number": 123}\'];'
+    dot_string = '"Start" -> "End" [data = "{\'key\': \'value\', \'number\': 123}"];'
     parser.parse(dot_string)
     assert len(parser.edges) == 1
     attrs = parser.edges[0].get('attributes', {})
