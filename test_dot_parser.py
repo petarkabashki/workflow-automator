@@ -130,7 +130,7 @@ def test_unquoted_node_names_with_spaces():
 # @pytest.mark.skip(reason="Test might be failing, needs investigation")
 def test_node_definition_with_attributes():
     parser = DotParser()
-    dot_string = 'Node1 [label="Test Node", data=\'{"key": "value"}\'];'
+    dot_string = 'Node1 [label="Test Node", data="{\\"key\\": \\"value\\"}"];'
     parser.parse(dot_string)
     assert len(parser.nodes) == 1
     assert parser.nodes[0]['name'] == "Node1"
@@ -178,13 +178,13 @@ def test_mixed_node_and_edge_definitions():
 # @pytest.mark.skip(reason="Test might be failing, needs investigation")
 def test_edge_json_attribute():
     parser = DotParser()
-    dot_string = '"Start" -> "End" [data = \'{"key": "value", "number": 123}\'];'
+    dot_string = '"Start" -> "End" [data="{\\"key\\": \\"value\\", \\"number\\": 123}"];'
     parser.parse(dot_string)
     assert len(parser.edges) == 1
     attrs = parser.edges[0].get('attributes', {})
     assert "data" in attrs
     assert isinstance(attrs["data"], dict)
-    assert attrs["data"] == {"key": "value", "number": 123}
+    assert attrs["data"] == {"key": "value", "number": 123} # assert against the parsed dict
 
 # Test edge with string attribute
 # @pytest.mark.skip(reason="Test might be failing, needs investigation")
@@ -202,7 +202,7 @@ def test_edge_string_attribute():
 # @pytest.mark.skip(reason="Test might be failing, needs investigation")
 def test_edge_json_attribute_invalid_json_fallback_string():
     parser = DotParser()
-    dot_string = '"Start" -> "End" [data = \'{invalid json}\'];'
+    dot_string = '"Start" -> "End" [data="{invalid json}"];'
     parser.parse(dot_string)
     assert len(parser.edges) == 1
     attrs = parser.edges[0].get('attributes', {})
