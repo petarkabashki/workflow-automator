@@ -115,6 +115,8 @@ class DotParser:
 
             if attributes_text:
                 node['attributes'] = self._parse_attributes(attributes_text)
+            elif 'attributes' not in node:  # Ensure attributes key exists even if no attributes are defined in this statement
+                node['attributes'] = {}
             
             return (True, m.end(), statement_text)
 
