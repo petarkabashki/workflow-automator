@@ -1,6 +1,6 @@
 import re
 import json
-from utils import strip_quotes
+from utils import strip_quotes, parse_json_attribute
 
 class DotParser:
     def __init__(self):
@@ -142,13 +142,7 @@ class DotParser:
                     key, value = attr_pair.split('=', 1)
                     key = key.strip()
                     value = value.strip()  # Just strip whitespace, don't remove quotes yet
-                    if value.startswith('{') and value.endswith('}'):
-                        # Try to parse JSON if value looks like JSON
-                        try:
-                            value = json.loads(value)
-                        except json.JSONDecodeError:
-                            value = strip_quotes(value)  # Fallback to string if JSON parsing fails, then strip quotes
-                    else:
-                        value = strip_quotes(value)  # For non-JSON values, strip quotes
+                    # Use our utility function to parse JSON attributes
+                    value = parse_json_attribute(value)
                     attributes[key] = value
         return attributes
