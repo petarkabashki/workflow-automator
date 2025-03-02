@@ -1,4 +1,6 @@
 import re
+import json
+from utils import strip_quotes
 
 class DotParser:
     def __init__(self):
