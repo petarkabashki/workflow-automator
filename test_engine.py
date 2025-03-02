@@ -243,19 +243,18 @@ def test_run_method(monkeypatch):
     workflow_generator = engine.start()
     current_state = next(workflow_generator)
     
-    while current_state[1] != "__end__":
+    while True:
         yielded_sequence.append(current_state) # Capture yielded value (tuple)
         if current_state[0] == "state_change": # Extract state name for state_sequence
             state_sequence.append(current_state[1]) # Append just the state name
+            if current_state[1] == "__end__":  # Break if we reach __end__ state
+                break
         try:
             current_state = next(workflow_generator) # Advance to next yield
         except StopIteration:
             break # Exit loop if generator finishes
     
-    state_sequence.append("__end__") # Append __end__ as loop breaks before adding it
-    yielded_sequence.append(("state_change", "__end__")) # Capture final __end__ state_change
-    
     assert state_sequence == ['__start__', 'request_input', 'extract_n_check', 'ask_confirmation', 'process_data', '__end__'] # Full expected path
     
-    log_content = log_capture.get_logs() # Optionally keep log check
+    log_content = log_capture.get_logs() # Keep log check
     assert "Workflow completed successfully" in log_content # Verify workflow completion log
