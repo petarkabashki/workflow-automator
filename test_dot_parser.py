@@ -170,7 +170,7 @@ class TestDotParser(unittest.TestCase):
                 edge.target == 'extract_n_check' and 
                 edge.label == 'OK (Name and email provided)'):
                 edge_found = True
-                self.assertEqual(edge.data, "{m: 1, n: 2}")  # Match the actual string value
+                self.assertEqual(edge.data, {"m": 1, "n": 2})  # Now expecting a parsed dict
                 break
         self.assertTrue(edge_found, "Expected edge not found")
     
@@ -198,6 +198,19 @@ class TestDotParser(unittest.TestCase):
         graph = self.parser.parse(self.simple_dot)
         expected_str = f"Graph(strict=True, directed=True, nodes={list(graph.nodes.keys())}, edges={len(graph.edges)})"
         self.assertEqual(str(graph), expected_str)
+    
+    def test_javascript_style_object_notation(self):
+        """Test parsing JavaScript-style object notation in data attributes."""
+        dot_string = '''
+        strict digraph {
+            Node1 [data="{key: 'value', num: 42, bool: true}"];
+        }
+        '''
+        graph = self.parser.parse(dot_string)
+        
+        self.assertEqual(len(graph.nodes), 1)
+        node = graph.nodes['Node1']
+        self.assertEqual(node.data, {"key": "value", "num": 42, "bool": True})
 
 if __name__ == '__main__':
     unittest.main()
