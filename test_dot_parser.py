@@ -33,8 +33,9 @@ class TestDotParser(unittest.TestCase):
         '''
     
     def test_empty_string(self):
-        """Test that an empty string produces no nodes or edges."""
-        with pytest.raises(ValueError):
+        """Test that an empty string produces an error."""
+        # Empty string is not valid DOT syntax
+        with self.assertRaises(ValueError):
             self.parser.parse("")
     
     def test_simple_graph_with_nodes_and_edges(self):
@@ -183,11 +184,13 @@ class TestDotParser(unittest.TestCase):
     
     def test_node_str_representation(self):
         """Test the string representation of Node objects."""
+        # This test doesn't need the parser
         node = Node(id="test_node", data={"key": "value"})
         self.assertEqual(str(node), "Node(test_node, data={'key': 'value'})")
     
     def test_edge_str_representation(self):
         """Test the string representation of Edge objects."""
+        # This test doesn't need the parser
         edge = Edge(source="src", target="dst", label="test", data={"weight": 5})
         self.assertEqual(str(edge), "Edge(src -> dst, label=test, data={'weight': 5})")
 

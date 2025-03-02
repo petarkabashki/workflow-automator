@@ -38,15 +38,16 @@ class DotParser:
         strict: "strict"
         graph_type: "digraph"
         
-        stmt_list: [stmt [";" stmt]*]
+        stmt_list: stmt (";" stmt)* ";"?
+                 | 
         stmt: node_stmt | edge_stmt
         
-        node_stmt: node_id [attr_list]
+        node_stmt: node_id attr_list?
         node_id: ID
         
-        edge_stmt: node_id "->" node_id [attr_list]
+        edge_stmt: node_id "->" node_id attr_list?
         
-        attr_list: "[" attr ["," attr]* "]"
+        attr_list: "[" attr ("," attr)* "]"
         attr: ID "=" value
         
         value: STRING | ID
