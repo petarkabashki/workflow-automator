@@ -38,24 +38,47 @@ class WorkflowRunner:
         yield (f"extract_n_check_init", f"Data from extract_n_check")
         instruction, context = yield ("ready", f"Waiting in extract_n_check")
         print(f"extract_n_check received: {instruction}, {context}")
+        
+        # Extract user input from context
+        user_input = context.get("user_input", "")
+        print(f"Extracted name and email: {user_input}")
+        
         if context == "transition_from_node":
             yield ("node_transition", "next_node")  # Example of node-initiated transition
         yield ("node-enter", "extract_n_check")
-        yield ("transition", "ask_confirmation")
+        yield ("transition", "ask_confirmation", {"user_data": user_input})
 
     def ask_confirmation(self):
         yield (f"ask_confirmation_init", f"Data from ask_confirmation")
         instruction, context = yield ("ready", f"Waiting in ask_confirmation")
         print(f"ask_confirmation received: {instruction}, {context}")
-        if context == "transition_from_node":
-            yield ("node_transition", "next_node")  # Example of node-initiated transition
-        yield ("node-enter", "ask_confirmation")
-        yield ("transition", "process_data")
+        
+        # Get user data from context
+        user_data = context.get("user_data", "")
+        
+        # Ask for confirmation
+        print("Confirm processing? (Y/N)")
+        confirmation = yield ("get_input", None)
+        
+        if confirmation.lower() == "n":
+            yield ("node-enter", "ask_confirmation")
+            yield ("transition", "request_input")
+        elif confirmation.lower() == "q":
+            yield ("node-enter", "ask_confirmation")
+            yield ("transition", "__end__")
+        else:  # Default to "Y" for any other input
+            yield ("node-enter", "ask_confirmation")
+            yield ("transition", "process_data", {"user_data": user_data})
 
     def process_data(self):
         yield (f"process_data_init", f"Data from process_data")
         instruction, context = yield ("ready", f"Waiting in process_data")
         print(f"process_data received: {instruction}, {context}")
+        
+        # Process the user data
+        user_data = context.get("user_data", "")
+        print(f"Processing data: {user_data}")
+        
         if context == "transition_from_node":
             yield ("node_transition", "next_node")  # Example of node-initiated transition
         yield ("node-enter", "process_data")
@@ -74,6 +97,10 @@ class WorkflowRunner:
         yield (f"__end___init", f"Data from __end__")
         instruction, context = yield ("ready", f"Waiting in __end__")
         print(f"__end__ received: {instruction}, {context}")
+        
+        # Print completion message
+        print("Workflow completed successfully")
+        
         if context == "transition_from_node":
             yield ("node_transition", "next_node")  # Example of node-initiated transition
         yield ("node-enter", "__end__")
