@@ -1,5 +1,4 @@
 import unittest
-import pytest
 from dot_parser import DotParser, Node, Edge, Graph, parse_dot
 
 class TestDotParser(unittest.TestCase):
@@ -114,7 +113,7 @@ class TestDotParser(unittest.TestCase):
             node1[data="{invalid json}"]
         }
         '''
-        with pytest.raises(ValueError):
+        with self.assertRaises(ValueError):
             self.parser.parse(dot_string)
     
     def test_parse_simple_graph(self):
@@ -193,6 +192,12 @@ class TestDotParser(unittest.TestCase):
         # This test doesn't need the parser
         edge = Edge(source="src", target="dst", label="test", data={"weight": 5})
         self.assertEqual(str(edge), "Edge(src -> dst, label=test, data={'weight': 5})")
+    
+    def test_graph_str_representation(self):
+        """Test the string representation of Graph objects."""
+        graph = self.parser.parse(self.simple_dot)
+        expected_str = f"Graph(strict=True, directed=True, nodes={list(graph.nodes.keys())}, edges={len(graph.edges)})"
+        self.assertEqual(str(graph), expected_str)
 
 if __name__ == '__main__':
     unittest.main()
