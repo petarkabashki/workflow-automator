@@ -147,3 +147,47 @@ def test_unquoted_node_names_with_spaces():
     assert len(parser.edges) == 1
     assert parser.edges[0]['source'] == "Start"
     assert parser.edges[0]['destination'] == "End"
+
+# Test node definition with attributes
+def test_node_definition_with_attributes():
+    parser = DotParser()
+    dot_string = 'Node1 [label="Test Node", data=\'{"key": "value"}\'];'
+    parser.parse(dot_string)
+    assert len(parser.nodes) == 1
+    assert parser.nodes[0]['name'] == "Node1"
+    assert 'attributes' in parser.nodes[0]
+    assert parser.nodes[0]['attributes']['label'] == "Test Node"
+    assert parser.nodes[0]['attributes']['data'] == {"key": "value"}
+
+# Test node definition without attributes
+def test_node_definition_without_attributes():
+    parser = DotParser()
+    dot_string = 'Node1;'
+    parser.parse(dot_string)
+    assert len(parser.nodes) == 1
+    assert parser.nodes[0]['name'] == "Node1"
+
+# Test quoted node definition
+def test_quoted_node_definition():
+    parser = DotParser()
+    dot_string = '"Node with spaces" [label="Test"];'
+    parser.parse(dot_string)
+    assert len(parser.nodes) == 1
+    assert parser.nodes[0]['name'] == "Node with spaces"
+    assert parser.nodes[0]['attributes']['label'] == "Test"
+
+# Test mixed node definitions and edge connections
+def test_mixed_node_and_edge_definitions():
+    parser = DotParser()
+    dot_string = '''
+    Node1 [label="First Node"];
+    Node2 [label="Second Node"];
+    Node1 -> Node2;
+    '''
+    parser.parse(dot_string)
+    assert len(parser.nodes) == 2
+    assert len(parser.edges) == 1
+    assert parser.nodes[0]['attributes']['label'] == "First Node"
+    assert parser.nodes[1]['attributes']['label'] == "Second Node"
+    assert parser.edges[0]['source'] == "Node1"
+    assert parser.edges[0]['destination'] == "Node2"

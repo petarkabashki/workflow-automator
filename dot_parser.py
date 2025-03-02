@@ -26,10 +26,17 @@ class DotParser:
             dot_string = graph_match.group(1).strip()
             # print(f"Extracted graph content: '{dot_string}'")
 
-        # Only parse edge connections.
+        # Parse edge connections and node definitions.
         while dot_string:
             initial_length = len(dot_string)
-            success, consumed, statement_text = self._parse_edge_connection(dot_string)
+            
+            # Try to parse as edge connection first, then as node definition
+            edge_result = self._parse_edge_connection(dot_string)
+            if edge_result[0]:  # If edge parsing succeeded
+                success, consumed, statement_text = edge_result
+            else:  # Try node definition
+                success, consumed, statement_text = self._parse_node_definition(dot_string)
+                
             # print(f"  Statement: '{statement_text}'")
             # print(f"  Success: {success}, Consumed: {consumed}")
             if success:
@@ -79,10 +86,50 @@ class DotParser:
             return (True, m.end(), statement_text)
         return (False, 0, "")
 
+    def _parse_node_definition(self, text):
+        """Parse node definition statements, e.g., 'node_name [attribute="value"];'."""
+        node_pattern = (
+            r'^(?P<name>"[^"]+"|[^"\s;-]+)\s*'
+            r'(?:\[\s*(?P<attributes>[^]]*)\s*\])?\s*;?'
+        )
+        m = re.match(node_pattern, text)
+        if m:
+            statement_text = m.group(0)
+            node_name = m.group('name')
+            # Remove quotes if present
+            if node_name.startswith('"') and node_name.endswith('"'):
+                node_name = node_name[1:-1]
+
+            attributes_text = m.group('attributes')  # Can be None
+
+            # Get existing or create new node
+            node = None
+            for n in self.nodes:
+                if n.get('name') == node_name.strip():
+                    node = n
+                    break
+            
+            if node is None:
+                node = {'name': node_name.strip(), 'label': node_name.strip()}
+                self.nodes.append(node)
+
+            if attributes_text:
+                node['attributes'] = self._parse_attributes(attributes_text)
+            
+            return (True, m.end(), statement_text)
+
+        return (False, 0, "")
+
     def _ensure_node_exists(self, name):
         name = name.strip()
-        if not any(n.get('name') == name for n in self.nodes):
-            self.nodes.append({'name': name, 'label': name})
+        for node in self.nodes:
+            if node.get('name') == name:
+                return node
+        
+        # Node doesn't exist, create it
+        node = {'name': name, 'label': name}
+        self.nodes.append(node)
+        return node
             
     def _parse_attributes(self, attributes_text):
         """Parse attribute string into a dictionary of attributes."""
