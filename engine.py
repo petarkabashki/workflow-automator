@@ -125,8 +125,8 @@ class Engine:
         Generator that processes state functions and handles instructions.
         Yields and receives (instruction, context) tuples.
         """
-        self.logger.debug(f"Starting run with current state: {self.current_state}")
-        
+        self.logger.debug("Starting engine run")
+
         # Initial state change notification
         yield ("state_change", self.current_state)
         
@@ -134,7 +134,7 @@ class Engine:
         if self.current_state == "__end__":
             self.logger.debug("Workflow completed - reached end state")
             return
-            
+        
         while self.current_state:
             # Process any queued external instructions first
             if self.instruction_queue:
@@ -142,39 +142,37 @@ class Engine:
                 self.logger.debug(f"Processing queued instruction: {instruction}")
                 yield (instruction, context)
                 continue
-                
+
             # Initialize state generator if needed
             if not self.state_gen:
                 self.state_gen = self._get_state_generator(self.current_state)
                 if not self.state_gen:
                     self.logger.error(f"Failed to get generator for state: {self.current_state}")
                     break
-                    
+
             try:
-                # Send/receive with the state generator
+                # Get instruction/context from external or state function
                 instruction, context = yield
-                self.logger.debug(f"Received instruction: {instruction}, context: {context}")
                 
-                # Send the instruction to the state generator
+                # Send instruction/context to state generator
                 response = self.state_gen.send((instruction, context))
-                self.logger.debug(f"State generator response: {response}")
                 
                 # Handle state change instruction
-                if isinstance(response, tuple) and len(response) >= 2 and response[0] == 'state_change':
+                if isinstance(response, tuple) and response[0] == 'state_change':
                     new_state = response[1]
-                    self.logger.debug(f"State change requested to: {new_state}")
+                    self.logger.info(f"Processing state change to: {new_state}")
                     
-                    # Handle transition to the new state
                     if new_state in self.states:
                         self.current_state = new_state
+                        # Notify about state change
                         yield ("state_change", self.current_state)
                         
                         # Check if we've reached the end state
                         if self.current_state == "__end__":
-                            self.logger.debug("Workflow completed successfully")
+                            self.logger.info("Workflow completed successfully")
                             break
                             
-                        # Reset state generator for the new state
+                        # Reset state generator for new state
                         self.state_gen = None
                     else:
                         self.logger.error(f"Invalid state transition requested: {new_state}")
@@ -183,7 +181,7 @@ class Engine:
                     yield response
                     
             except StopIteration:
-                self.logger.debug(f"State function for {self.current_state} completed")
+                self.logger.info(f"State function for {self.current_state} completed")
                 self.state_gen = None
                 
                 # Auto-transition if there's only one possible next state
@@ -195,15 +193,15 @@ class Engine:
                             self.current_state = next_state
                             yield ("state_change", self.current_state)
                             continue
-                
+                            
                 # If no auto-transition, wait for explicit instruction
-                self.logger.debug(f"Waiting for next instruction in state: {self.current_state}")
-            
+                self.logger.info(f"Waiting for next instruction in state: {self.current_state}")
+                
             except Exception as e:
                 self.logger.error(f"Error in state generator: {e}")
                 self.state_gen = None
                 
-        self.logger.debug("Workflow engine run completed")
+        self.logger.info("Workflow engine run completed")
 
     def _get_state_generator(self, state_name):
         """
