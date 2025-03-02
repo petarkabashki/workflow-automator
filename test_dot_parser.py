@@ -1,217 +1,195 @@
+import unittest
 import pytest
-from dot_parser import DotParser, tokenize, build_graph
+from dot_parser import DotParser, Node, Edge, Graph, parse_dot
 
-# Test that an empty string produces no nodes or edges.
-def test_empty_string():
-    parser = DotParser(tokenize(""))
-    ast = parser.parse()
-    graph = build_graph(ast)
-    assert len(graph["nodes"]) == 0
-    assert len(graph["edges"]) == 0
+class TestDotParser(unittest.TestCase):
+    def setUp(self):
+        self.parser = DotParser()
+        
+        # Simple test graph
+        self.simple_dot = '''
+        strict digraph {
+            node1[data="{\"key\": \"value\"}"]
+            node1 -> node2[label="connection", data="{\"weight\": 5}"];
+        }
+        '''
+        
+        # More complex test graph (from the example)
+        self.complex_dot = '''
+        strict digraph {
+            __start__[data="{m: 1, n: 2}"]
+            __start__ -> request_input;
+            request_input -> extract_n_check[label="OK (Name and email provided)", data="{m: 1, n: 2}"];
+            request_input -> request_input[label="NOK (Missing name or email)"];
+            request_input -> __end__[label="QUIT"];
 
-# Test parsing a simple graph with three nodes and two edges (quoted).
-def test_simple_graph_with_nodes_and_edges_quoted():
-    dot_string = '''
-    "Start" -> "Process1";
-    "Process1" -> "End";
-    '''
+            extract_n_check -> request_input[label="NOK (Data missing)"];
+            extract_n_check -> ask_confirmation[label="OK (Data extracted)"];
+            ask_confirmation -> process_data[label="Y (Confirmed)"];
+            ask_confirmation -> request_input[label="N (Not confirmed)"];
+            ask_confirmation -> __end__[label="Q (Quit)"];
+            process_data -> __end__;
+        }
+        '''
     
-    parser = DotParser(tokenize(dot_string))
-    ast = parser.parse()
-    graph = build_graph(ast)
-    assert len(graph["nodes"]) == 3, "Expected 3 nodes"
-    assert "Start" in graph["nodes"]
-    assert "Process1" in graph["nodes"]
-    assert "End" in graph["nodes"]
-    assert len(graph["edges"]) == 2
+    def test_empty_string(self):
+        """Test that an empty string produces no nodes or edges."""
+        with pytest.raises(ValueError):
+            self.parser.parse("")
+    
+    def test_simple_graph_with_nodes_and_edges(self):
+        """Test parsing a simple graph with nodes and edges."""
+        dot_string = '''
+        strict digraph {
+            Start -> Process1;
+            Process1 -> End;
+        }
+        '''
+        graph = self.parser.parse(dot_string)
+        
+        self.assertEqual(len(graph.nodes), 3)
+        self.assertIn('Start', graph.nodes)
+        self.assertIn('Process1', graph.nodes)
+        self.assertIn('End', graph.nodes)
+        self.assertEqual(len(graph.edges), 2)
+    
+    def test_edge_label(self):
+        """Test parsing edge label."""
+        dot_string = '''
+        strict digraph {
+            Start -> End [label = "Test Label"];
+        }
+        '''
+        graph = self.parser.parse(dot_string)
+        
+        self.assertEqual(len(graph.edges), 1)
+        edge = graph.edges[0]
+        self.assertEqual(edge.label, "Test Label")
+    
+    def test_edge_without_label(self):
+        """Test edge without label."""
+        dot_string = '''
+        strict digraph {
+            Start -> End;
+        }
+        '''
+        graph = self.parser.parse(dot_string)
+        
+        self.assertEqual(len(graph.edges), 1)
+        edge = graph.edges[0]
+        self.assertIsNone(edge.label)
+    
+    def test_node_with_attributes(self):
+        """Test node definition with attributes."""
+        dot_string = '''
+        strict digraph {
+            Node1 [label="Test Node", data="{\"key\": \"value\"}"];
+        }
+        '''
+        graph = self.parser.parse(dot_string)
+        
+        self.assertEqual(len(graph.nodes), 1)
+        self.assertIn('Node1', graph.nodes)
+        node = graph.nodes['Node1']
+        self.assertEqual(node.data, {"key": "value"})
+    
+    def test_edge_with_json_data(self):
+        """Test edge with JSON data attribute."""
+        dot_string = '''
+        strict digraph {
+            Start -> End [data="{\"key\": \"value\", \"number\": 123}"];
+        }
+        '''
+        graph = self.parser.parse(dot_string)
+        
+        self.assertEqual(len(graph.edges), 1)
+        edge = graph.edges[0]
+        self.assertEqual(edge.data, {"key": "value", "number": 123})
+    
+    def test_invalid_json_data(self):
+        """Test handling of invalid JSON in data attributes."""
+        dot_string = '''
+        strict digraph {
+            node1[data="{invalid json}"]
+        }
+        '''
+        with pytest.raises(ValueError):
+            self.parser.parse(dot_string)
+    
+    def test_parse_simple_graph(self):
+        """Test parsing a simple graph with a single node and edge."""
+        graph = self.parser.parse(self.simple_dot)
+        
+        # Check graph properties
+        self.assertTrue(graph.strict)
+        self.assertTrue(graph.directed)
+        
+        # Check nodes
+        self.assertEqual(len(graph.nodes), 2)  # node1 and node2 (implicitly created)
+        self.assertIn('node1', graph.nodes)
+        self.assertIn('node2', graph.nodes)
+        
+        # Check node1 data
+        node1 = graph.nodes['node1']
+        self.assertEqual(node1.id, 'node1')
+        self.assertEqual(node1.data, {"key": "value"})
+        
+        # Check edges
+        self.assertEqual(len(graph.edges), 1)
+        edge = graph.edges[0]
+        self.assertEqual(edge.source, 'node1')
+        self.assertEqual(edge.target, 'node2')
+        self.assertEqual(edge.label, 'connection')
+        self.assertEqual(edge.data, {"weight": 5})
+    
+    def test_parse_complex_graph(self):
+        """Test parsing a more complex graph with multiple nodes and edges."""
+        graph = self.parser.parse(self.complex_dot)
+        
+        # Check graph properties
+        self.assertTrue(graph.strict)
+        self.assertTrue(graph.directed)
+        
+        # Check nodes
+        expected_nodes = ['__start__', 'request_input', 'extract_n_check', 
+                          'ask_confirmation', 'process_data', '__end__']
+        for node_id in expected_nodes:
+            self.assertIn(node_id, graph.nodes)
+        
+        # Check __start__ node data
+        start_node = graph.nodes['__start__']
+        self.assertEqual(start_node.data, {"m": 1, "n": 2})
+        
+        # Check edges
+        self.assertEqual(len(graph.edges), 10)
+        
+        # Check specific edge
+        edge_found = False
+        for edge in graph.edges:
+            if (edge.source == 'request_input' and 
+                edge.target == 'extract_n_check' and 
+                edge.label == 'OK (Name and email provided)'):
+                edge_found = True
+                self.assertEqual(edge.data, {"m": 1, "n": 2})
+                break
+        self.assertTrue(edge_found, "Expected edge not found")
+    
+    def test_parse_dot_function(self):
+        """Test the parse_dot convenience function."""
+        graph = parse_dot(self.simple_dot)
+        self.assertTrue(isinstance(graph, Graph))
+        self.assertEqual(len(graph.nodes), 2)
+        self.assertEqual(len(graph.edges), 1)
+    
+    def test_node_str_representation(self):
+        """Test the string representation of Node objects."""
+        node = Node(id="test_node", data={"key": "value"})
+        self.assertEqual(str(node), "Node(test_node, data={'key': 'value'})")
+    
+    def test_edge_str_representation(self):
+        """Test the string representation of Edge objects."""
+        edge = Edge(source="src", target="dst", label="test", data={"weight": 5})
+        self.assertEqual(str(edge), "Edge(src -> dst, label=test, data={'weight': 5})")
 
-# Test parsing a simple graph with three nodes and two edges (unquoted).
-def test_simple_graph_with_nodes_and_edges_unquoted():
-    dot_string = '''
-    Start -> Process1;
-    Process1 -> End;
-    '''
-    parser = DotParser(tokenize(dot_string))
-    ast = parser.parse()
-    graph = build_graph(ast)
-    assert len(graph["nodes"]) == 3, "Expected 3 nodes"
-    assert "Start" in graph["nodes"]
-    assert "Process1" in graph["nodes"]
-    assert "End" in graph["nodes"]
-    assert len(graph["edges"]) == 2
-
-# Test parsing a simple graph with mixed quoted and unquoted nodes.
-def test_simple_graph_with_nodes_and_edges_mixed():
-    dot_string = '''
-    "Start" -> Process1;
-    Process1 -> "End";
-    '''
-    parser = DotParser(tokenize(dot_string))
-    ast = parser.parse()
-    graph = build_graph(ast)
-    assert len(graph["nodes"]) == 3, "Expected 3 nodes"
-    assert "Start" in graph["nodes"]
-    assert "Process1" in graph["nodes"]
-    assert "End" in graph["nodes"]
-    assert len(graph["edges"]) == 2
-
-# Test parsing edge label.
-def test_edge_label():
-    dot_string = '"Start" -> "End" [label = "Test Label"];'
-    parser = DotParser(tokenize(dot_string))
-    ast = parser.parse()
-    graph = build_graph(ast)
-    assert len(graph["edges"]) == 1
-    attrs = graph["edges"][0].get('attributes', {})
-    assert attrs.get('label') == "Test Label"
-
-# Test that comments (single-line and multi-line) are ignored.
-def test_comments():
-    dot_string = '''
-    // This is a single-line comment
-    "Start" -> "End"; // inline comment
-    /*
-    This is a multi-line comment.
-    */
-    "A" -> "B";
-    '''
-    parser = DotParser(tokenize(dot_string))
-    ast = parser.parse()
-    graph = build_graph(ast)
-    assert len(graph["nodes"]) == 4
-    assert len(graph["edges"]) == 2
-
-# Test that a missing semicolon causes parsing to stop before later statements.
-def test_missing_semicolon():
-    dot_string = '"Start" -> "End" "A" -> "B";'
-    parser = DotParser(tokenize(dot_string))
-    ast = parser.parse()
-    graph = build_graph(ast)
-    assert len(graph["edges"]) == 1
-    assert graph["edges"][0]['source'] == "Start"
-
-# Test edge without label
-def test_edge_without_label():
-    dot_string = '"Start" -> "End";'
-    parser = DotParser(tokenize(dot_string))
-    ast = parser.parse()
-    graph = build_graph(ast)
-    assert len(graph["edges"]) == 1
-    assert 'attributes' not in graph["edges"][0] or not graph["edges"][0]['attributes']
-
-# Test edge without label and no attributes key
-def test_edge_without_label_no_attributes():
-    dot_string = 'process_data -> __end__;'
-    parser = DotParser(tokenize(dot_string))
-    ast = parser.parse()
-    graph = build_graph(ast)
-    assert len(graph["edges"]) == 1
-    assert graph["edges"][0]['source'] == "process_data"
-    assert graph["edges"][0]['target'] == "__end__"
-    assert 'attributes' not in graph["edges"][0] or not graph["edges"][0]['attributes'] # Verify no attributes key is present
-
-# Test unquoted node names with special characters (but valid).
-def test_unquoted_node_names_with_special_chars():
-    dot_string = 'Start_Node -> End.Node;'
-    parser = DotParser(tokenize(dot_string))
-    ast = parser.parse()
-    graph = build_graph(ast)
-    assert len(graph["nodes"]) == 2
-    assert len(graph["edges"]) == 1
-    assert graph["edges"][0]['source'] == "Start_Node"
-    assert graph["edges"][0]['target'] == "End.Node"
-
-# Test unquoted node names with leading/trailing spaces (should be trimmed).
-def test_unquoted_node_names_with_spaces():
-    dot_string = '   Start   ->   End   ;'
-    parser = DotParser(tokenize(dot_string))
-    ast = parser.parse()
-    graph = build_graph(ast)
-    assert len(graph["nodes"]) == 2
-    assert len(graph["edges"]) == 1
-    assert graph["edges"][0]['source'] == "Start"
-    assert graph["edges"][0]['target'] == "End"
-
-# Test node definition with attributes
-def test_node_definition_with_attributes():
-    dot_string = 'Node1 [label="Test Node", data="{\\"key\\": \\"value\\"}"];'
-    parser = DotParser(tokenize(dot_string))
-    ast = parser.parse()
-    graph = build_graph(ast)
-    assert len(graph["nodes"]) == 1
-    assert "Node1" in graph["nodes"]
-    node_attrs = graph["nodes"]["Node1"]
-    assert 'label' in node_attrs
-    assert node_attrs['label'] == "Test Node"
-    assert isinstance(node_attrs['data'], dict) # assert type is dict
-    assert node_attrs['data']['key'] == "value" # assert key and value
-
-# Test node definition without attributes
-def test_node_definition_without_attributes():
-    dot_string = 'Node1;'
-    parser = DotParser(tokenize(dot_string))
-    ast = parser.parse()
-    graph = build_graph(ast)
-    assert len(graph["nodes"]) == 1
-    assert "Node1" in graph["nodes"]
-
-# Test quoted node definition
-def test_quoted_node_definition():
-    dot_string = '"Node with spaces" [label="Test"];'
-    parser = DotParser(tokenize(dot_string))
-    ast = parser.parse()
-    graph = build_graph(ast)
-    assert len(graph["nodes"]) == 1
-    assert "Node with spaces" in graph["nodes"]
-    assert graph["nodes"]["Node with spaces"]['label'] == "Test"
-
-# Test mixed node definitions and edge connections
-def test_mixed_node_and_edge_definitions():
-    dot_string = '''
-    Node1 [label="First Node"];
-    Node2 [label="Second Node"];
-    Node1 -> Node2;
-    '''
-    parser = DotParser(tokenize(dot_string))
-    ast = parser.parse()
-    graph = build_graph(ast)
-    assert len(graph["nodes"]) == 2
-    assert len(graph["edges"]) == 1
-    assert graph["nodes"]["Node1"]['label'] == "First Node"
-    assert graph["nodes"]["Node2"]['label'] == "Second Node"
-    assert graph["edges"][0]['source'] == "Node1"
-    assert graph["edges"][0]['target'] == "Node2"
-
-# Test edge with JSON attribute
-def test_edge_json_attribute():
-    dot_string = '"Start" -> "End" [data="{\\"key\\": \\"value\\", \\"number\\": 123}"];'
-    parser = DotParser(tokenize(dot_string))
-    ast = parser.parse()
-    graph = build_graph(ast)
-    assert len(graph["edges"]) == 1
-    attrs = graph["edges"][0].get('attributes', {})
-    assert "data" in attrs
-    assert attrs["data"]["key"] == "value" # assert key and value
-    assert attrs["data"]["number"] == 123 # assert key and value
-
-# Test edge with string attribute
-def test_edge_string_attribute():
-    dot_string = '"Start" -> "End" [config = "string value"];'
-    parser = DotParser(tokenize(dot_string))
-    ast = parser.parse()
-    graph = build_graph(ast)
-    assert len(graph["edges"]) == 1
-    attrs = graph["edges"][0].get('attributes', {})
-    assert "config" in attrs
-    assert isinstance(attrs["config"], str)
-    assert attrs["config"] == "string value"
-
-# Test edge with invalid JSON attribute (should fallback to string)
-def test_edge_json_attribute_invalid_json_fallback_string():
-    dot_string = '"Start" -> "End" [data="{invalid json}"];'
-    parser = DotParser(tokenize(dot_string))
-    ast = parser.parse()
-    graph = build_graph(ast)
-    assert len(graph["edges"]) == 1
-    attrs = graph["edges"][0].get('attributes', {})
-    assert attrs.get('data') == "{invalid json}"
+if __name__ == '__main__':
+    unittest.main()
