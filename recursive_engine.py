@@ -1,5 +1,5 @@
 
-def state_machine_engine_recursive_simplified_end_payload_transition(state_definitions, initial_state="__start__", debug_mode=False):
+def recursive_engine(state_definitions, initial_state="__start__", debug_mode=False):
     if "__start__" not in state_definitions:
         raise ValueError("State machine must have a '__start__' state.")
     if "__end__" not in state_definitions:
@@ -15,7 +15,7 @@ def state_machine_engine_recursive_simplified_end_payload_transition(state_defin
             state_function = state_definition
         elif isinstance(state_definition, dict):  # Treat as sub-state machine
             sub_machine_definition = state_definition
-            state_function = lambda input_data: state_machine_engine_recursive_simplified_end_payload_transition(sub_machine_definition, initial_state="__start__", debug_mode=debug_mode) # Recursive call
+            state_function = lambda input_data: recursive_engine(sub_machine_definition, initial_state="__start__", debug_mode=debug_mode) # Recursive call
         else:
             raise ValueError(f"Invalid state definition for '{current_state_name}'. Must be function or dict.")
 
